@@ -14,7 +14,7 @@ int main(int argc, char ** argv) {
     sourcefile = stdin;
   } else { // read specified file
     printf("File to process: %s\n\n", argv[1]);
-    sourcefile = fopen(argv[1], "r");
+    sourcefile = fopen(argv[1], "rt");
   }
 
   tokenizer_start(sourcefile);
