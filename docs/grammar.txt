@@ -1,0 +1,45 @@
+id := first_id_char
+    | first_id_char id_chars
+
+first_id_char := <any of: a-z A-Z _>
+
+id_chars := id_char | id_char id_chars
+
+id_char := <any of: a-z A-Z 0-9 _>
+
+literal := int_literal
+         | float_literal
+         | string_literal
+         | boolean_literal
+         | array_literal
+
+int_literal := nums
+
+nums := num | num nums
+
+num := <0-9>
+
+float_literal := nums . nums
+
+string_literal := " chars1 "
+                | ' chars2 '
+
+chars1 := char1 | char1 chars1
+
+char1 := <any char except newline and ">
+
+chars2 := char2 | char2 chars2
+
+char2 := <any char except newline and '>
+
+boolean_literal := true | false
+
+array_literal := <to do>
+
+op := <any of: + - * / % >
+
+bool_op := <any of: < > == != and or not>
+
+end_cond := :
+
+stat_sep := ;
