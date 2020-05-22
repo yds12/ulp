@@ -6,20 +6,18 @@
 #define BUFFER_SIZE 100000
 #define TOKENS_SIZE 1000
 
-#define TTYPE_UNKNOWN -1
-#define TTYPE_ID 0
-#define TTYPE_LIT_INT 1
-#define TTYPE_LIT_FLOAT 2
-#define TTYPE_LIT_STRING 3
-
 char* filename;
 
 void error(char* msg, int lnum, int chnum);
 
-Token addToken(char * buffer, int size, int lnum, int chnum);
+void addToken(char * buffer, int size, TokenType type, int lnum, int chnum);
 
-// for straightforward 1 character symbols: +, -, *, {, }, (, )
+// for straightforward 1 character symbols: *, {, }, (, )
 void processSingleSymb(FILE* sourcefile, char* buffer, int* bufpos, 
+  int* lnum, int* chnum);
+
+// for symbols that are duplicated characters: ==, ++, --
+void processDoubleSymb(FILE* sourcefile, char* buffer, int* bufpos, 
   int* lnum, int* chnum);
 
 void processSlash(FILE* sourcefile, char* buffer, int* bufpos, 
@@ -57,12 +55,14 @@ void tokenizer_start(FILE* sourcefile, char* sourcefilename) {
     } else if(ch == '"') { // beginning of a string
       processDQuote(sourcefile, char_buffer, &i, &lnum, &chnum);
     } else if(ch == '(' || ch == ')' || ch == '{' || ch == '}' ||
-      ch == ';' || ch == '+' || ch == '-' || ch == '*') 
+      ch == ';' || ch == '*' || ch == '%' || ch == ':') 
     {
       processSingleSymb(sourcefile, char_buffer, &i, &lnum, &chnum);
+    } else if(ch == '=' || ch == '+' || ch == '-') {
+      processDoubleSymb(sourcefile, char_buffer, &i, &lnum, &chnum);
     } else if(ch == ' ' || ch == '\n') {
       if(i > 0) { // end of a token
-        addToken(char_buffer, i, lnum, chnum);
+        addToken(char_buffer, i, TTUnknown, lnum, chnum);
       }
       i = 0; // restart buffer
     } else i++;
@@ -73,24 +73,84 @@ void tokenizer_start(FILE* sourcefile, char* sourcefilename) {
   }
 
   for(int i = 0; i < n_tokens; i++) {
-    printf("Type: %d, Size: %d, Pos:%d,%d, Content:||%s||\n", tokens[i].type, 
-      tokens[i].name_size, tokens[i].lnum, tokens[i].chnum, tokens[i].name);
+    printf("tt_%d @%d,%d, len: %d, ||%s||\n", tokens[i].type, 
+      tokens[i].lnum, tokens[i].chnum, tokens[i].name_size, tokens[i].name);
   }
   printf("Total tokens: %d\n", n_tokens);
+}
+
+void processDoubleSymb(FILE* sourcefile, char* buffer, int* bufpos, 
+  int* lnum, int* chnum)
+{
+  if(*bufpos > 0) { // add previous token
+    addToken(buffer, *bufpos, TTUnknown, *lnum, *chnum - *bufpos);
+    buffer[0] = buffer[*bufpos];
+  }
+  *bufpos = 1;
+
+  char ch = fgetc(sourcefile);
+  (*chnum)++;
+
+  TokenType type = TTUnknown;
+
+  if(ch == buffer[0]) { // double symbol
+    switch(buffer[0]) {
+      case '=': type = TTEq;
+      case '+': type = TTIncr;
+      case '-': type = TTDecr;
+    }
+
+    buffer[*bufpos] = ch;
+    addToken(buffer, 2, TTEq, *lnum, *chnum);
+    *bufpos = 0;
+  } else { // single symbol
+    switch(buffer[0]) {
+      case '=': type = TTAssign;
+      case '+': type = TTPlus;
+      case '-': type = TTMinus;
+    }
+
+    addToken(buffer, 1, TTAssign, *lnum, *chnum);
+    *bufpos = 0;
+    buffer[*bufpos] = ch;
+  }
 }
 
 void processSingleSymb(FILE* sourcefile, char* buffer, int* bufpos, 
   int* lnum, int* chnum)
 {
   if(*bufpos > 0) { // add previous token
-    addToken(buffer, *bufpos, *lnum, *chnum - *bufpos);
+    addToken(buffer, *bufpos, TTUnknown, *lnum, *chnum - *bufpos);
     buffer[0] = buffer[*bufpos];
     *bufpos = 1;
   }
-  addToken(buffer, *bufpos, *lnum, *chnum - 1);
+  int type = TTUnknown;
+
+  switch(buffer[0]) {
+    case '(': type = TTLPar;
+      break;
+    case ')': type = TTRPar;
+      break;
+    case '{': type = TTLBrace;
+      break;
+    case '}': type = TTRBrace;
+      break;
+    case ';': type = TTSemi;
+      break;
+    case '*': type = TTMult;
+      break;
+    case '%': type = TTMod;
+      break;
+    case ':': type = TTColon;
+      break;
+  }
+
+  addToken(buffer, *bufpos, type, *lnum, *chnum - 1);
   *bufpos = 0;
 }
 
+// Need to improve string processing. Only valid ASCII or UTF-8 strings should
+// be allowed
 void processDQuote(FILE* sourcefile, char* buffer, int* bufpos,
   int* lnum, int* chnum)
 {
@@ -98,7 +158,7 @@ void processDQuote(FILE* sourcefile, char* buffer, int* bufpos,
 //  buffer[*bufpos], buffer[0], *bufpos);
 
   if(*bufpos > 0) { // add previous token
-    addToken(buffer, *bufpos, *lnum, *chnum - *bufpos);
+    addToken(buffer, *bufpos, TTUnknown, *lnum, *chnum - *bufpos);
     buffer[0] = buffer[*bufpos];
     *bufpos = 1;
   }
@@ -118,7 +178,7 @@ void processDQuote(FILE* sourcefile, char* buffer, int* bufpos,
   } else if(ch == '"') {
 //printf("adding dquote2... char||%c|| 1st||%c|| pos:%d\n", 
 //  buffer[*bufpos], buffer[0], *bufpos);
-    addToken(buffer, *bufpos, *lnum, *chnum);
+    addToken(buffer, *bufpos, TTLitString, *lnum, *chnum);
     *bufpos = 0;
   }
 }
@@ -134,20 +194,21 @@ void processSlash(FILE* sourcefile, char* buffer, int* bufpos,
     (*lnum)++;
     *chnum = 1;
   } else if(*bufpos > 0) { // not a comment, thus division
-    addToken(buffer, *bufpos, *lnum, *chnum); // adds previous token
-    addToken(buffer + (*bufpos), 1, *lnum, *chnum); // adds division op.
+    addToken(buffer, *bufpos, TTUnknown, *lnum, *chnum); // adds previous token
+    addToken(buffer + (*bufpos), 1, TTDiv, *lnum, *chnum); // adds division op.
   }
   *bufpos = 0; // resets buffer
   return;
 }
 
-Token addToken(char * buffer, int size, int lnum, int chnum) {
+void addToken(char * buffer, int size, TokenType type, int lnum, int chnum) {
+  if(size == 0) return;
 //  printf("Generating token:%.*s\n", size, buffer);
 //  printf("char:||%c||, 1st:||%c||, size:%d\n", buffer[size - 1], buffer[0],
 //    size);
 
   char* tokenName = (char*) malloc((size + 1) * sizeof(char));
-  Token token = { tokenName, size, TTYPE_UNKNOWN, lnum, chnum };
+  Token token = { tokenName, size, type, lnum, chnum };
   strncpy(tokenName, buffer, size);
   token.name[size] = '\0';
   tokens[n_tokens] = token;
