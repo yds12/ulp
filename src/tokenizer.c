@@ -11,13 +11,13 @@
 */
 
 char tokenizerGetChar(FILE* file);
-void addToken(char * buffer, int size, TokenType type);
-void eatIDKW(FILE* sourcefile, char* buffer, int* bufpos);
-void eatNumber(FILE* sourcefile, char* buffer, int* bufpos);
-void eatSlash(FILE* sourcefile, char* buffer, int* bufpos); 
-void eatDQuote(FILE* sourcefile, char* buffer, int* bufpos);
-void eatSingleSymb(FILE* sourcefile, char* buffer, int* bufpos);
-void eatDoubleSymb(FILE* sourcefile, char* buffer, int* bufpos);
+void addToken(char* buffer, int size, TokenType type);
+void eatIDKW(FILE* sourcefile, char* buffer);
+void eatNumber(FILE* sourcefile, char* buffer);
+void eatSlash(FILE* sourcefile, char* buffer); 
+void eatDQuote(FILE* sourcefile, char* buffer);
+void eatSingleSymb(FILE* sourcefile, char* buffer);
+void eatDoubleSymb(FILE* sourcefile, char* buffer);
 
 /*
 * Functions
@@ -39,38 +39,36 @@ void tokenizerStart(FILE* sourcefile, char* sourcefilename) {
 
   // Buffer to read the chars, is reset at the end of each token
   char charBuffer[BUFFER_SIZE];
-  int i = 0;
   n_tokens = 0;
-  char ch;
+
+  // start with the first character
+  if(!feof(sourcefile)) {
+    charBuffer[0] = tokenizerGetChar(sourcefile);
+  }
 
   while(!feof(sourcefile)) {
-    ch = tokenizerGetChar(sourcefile);
-
-    charBuffer[i] = ch;
+    char ch = charBuffer[0];
 
     // depending on the character read, call a method to process next token(s)
-    if(ch == '/') eatSlash(sourcefile, charBuffer, &i);
-    else if(ch == '"') eatDQuote(sourcefile, charBuffer, &i);
-    else if(isSingleCharOp(ch)) eatSingleSymb(sourcefile, charBuffer, &i);
-    else if(belongsToDoubleOp(ch)) eatDoubleSymb(sourcefile, charBuffer, &i);
-    else if(isAlpha(ch) || ch == '_') eatIDKW(sourcefile, charBuffer, &i);
-    else if(isNum(ch)) eatNumber(sourcefile, charBuffer, &i);
+    // All functions should finish with the next character in buffer[0]
+    if(ch == '/') eatSlash(sourcefile, charBuffer);
+    else if(ch == '"') eatDQuote(sourcefile, charBuffer);
+    else if(isSingleCharOp(ch)) eatSingleSymb(sourcefile, charBuffer);
+    else if(belongsToDoubleOp(ch)) eatDoubleSymb(sourcefile, charBuffer);
+    else if(isAlpha(ch) || ch == '_') eatIDKW(sourcefile, charBuffer);
+    else if(isNum(ch)) eatNumber(sourcefile, charBuffer);
     else if(isWhitespace(ch)) {
-      if(i > 0) addToken(charBuffer, i, TTUnknown); // end of a token
-      i = 0; // restart buffer
-    } else i++;
-
-    if(i == BUFFER_SIZE) {
-      error("File too long. Buffer overflowed.");
+      charBuffer[0] = tokenizerGetChar(sourcefile);
     }
   }
 
   // Debug info ---------
   for(int i = 0; i < n_tokens; i++) {
-    printf("\n\ntt_%d @%d,%d, len: %d, ||%s||\n", tokens[i].type, 
+    //printf("\n\n");
+    printf("tt_%d @%d,%d, len: %d, ||%s||\n", tokens[i].type, 
       tokens[i].lnum, tokens[i].chnum, tokens[i].nameSize, tokens[i].name);
 
-    printTokenInFile(sourcefile, tokens[i]);
+    //printTokenInFile(sourcefile, tokens[i]);
   }
   printf("Total tokens: %d\n", n_tokens);
   // --------------------
@@ -78,94 +76,78 @@ void tokenizerStart(FILE* sourcefile, char* sourcefilename) {
   fclose(sourcefile);
 }
 
-void eatIDKW(FILE* sourcefile, char* buffer, int* bufpos)
+/*
+ * Process identifiers and keywords 
+ */
+void eatIDKW(FILE* sourcefile, char* buffer)
 {
-  if(*bufpos > 0) { // add previous token
-    addToken(buffer, *bufpos, TTUnknown);
-    buffer[0] = buffer[*bufpos];
-  }
-  *bufpos = 1;
-
+  int bufpos = 1;
   char ch = tokenizerGetChar(sourcefile);
-
   TokenType type = TTId;
 
   while(isNum(ch) || isAlpha(ch) || ch == '_') { // Still ID or keyword
-    buffer[*bufpos] = ch;
+    buffer[bufpos] = ch;
     ch = tokenizerGetChar(sourcefile);
-    (*bufpos)++;
+    bufpos++;
   }
 
-  switch(*bufpos) {
+  switch(bufpos) {
     case 2:
-      if(strncmp("if", buffer, *bufpos) == 0) type = TTIf;
-      else if(strncmp("or", buffer, *bufpos) == 0) type = TTOr;
-      else if(strncmp("fn", buffer, *bufpos) == 0) type = TTFunc;
+      if(strncmp("if", buffer, bufpos) == 0) type = TTIf;
+      else if(strncmp("or", buffer, bufpos) == 0) type = TTOr;
+      else if(strncmp("fn", buffer, bufpos) == 0) type = TTFunc;
       break;
     case 3:
-      if(strncmp("and", buffer, *bufpos) == 0) type = TTAnd;
-      else if(strncmp("for", buffer, *bufpos) == 0) type = TTFor;
-      else if(strncmp("int", buffer, *bufpos) == 0) type = TTInt;
-      else if(strncmp("not", buffer, *bufpos) == 0) type = TTNot;
+      if(strncmp("and", buffer, bufpos) == 0) type = TTAnd;
+      else if(strncmp("for", buffer, bufpos) == 0) type = TTFor;
+      else if(strncmp("int", buffer, bufpos) == 0) type = TTInt;
+      else if(strncmp("not", buffer, bufpos) == 0) type = TTNot;
       break;
     case 4:
-      if(strncmp("bool", buffer, *bufpos) == 0) type = TTBool;
-      else if(strncmp("else", buffer, *bufpos) == 0) type = TTElse;
-      else if(strncmp("next", buffer, *bufpos) == 0) type = TTNext;
+      if(strncmp("bool", buffer, bufpos) == 0) type = TTBool;
+      else if(strncmp("else", buffer, bufpos) == 0) type = TTElse;
+      else if(strncmp("next", buffer, bufpos) == 0) type = TTNext;
       break;
     case 5:
-      if(strncmp("break", buffer, *bufpos) == 0) type = TTBreak;
-      else if(strncmp("float", buffer, *bufpos) == 0) type = TTFloat;
-      else if(strncmp("while", buffer, *bufpos) == 0) type = TTWhile;
+      if(strncmp("break", buffer, bufpos) == 0) type = TTBreak;
+      else if(strncmp("float", buffer, bufpos) == 0) type = TTFloat;
+      else if(strncmp("while", buffer, bufpos) == 0) type = TTWhile;
       break;
     case 6:
-      if(strncmp("string", buffer, *bufpos) == 0) type = TTString;
+      if(strncmp("string", buffer, bufpos) == 0) type = TTString;
       break;
   }
 
   // Add the ID/keyword token
-  addToken(buffer, *bufpos, type);
-
-  // we have read already the first character of the next token
-  // during the while loop above
-  if(isWhitespace(ch)) { // discard if whitespace
-    *bufpos = 0;
-  } else {
-    buffer[0] = ch;
-    *bufpos = 1;
-  }
+  addToken(buffer, bufpos, type);
+  buffer[0] = tokenizerState.lastChar;
+  return;
 }
 
-void eatNumber(FILE* sourcefile, char* buffer, int* bufpos)
+void eatNumber(FILE* sourcefile, char* buffer)
 {
-  if(*bufpos > 0) { // add previous token
-    addToken(buffer, *bufpos, TTUnknown);
-    buffer[0] = buffer[*bufpos];
-  }
-  *bufpos = 1;
-
+  int bufpos = 1;
   char ch = tokenizerGetChar(sourcefile);
-
   TokenType type = TTLitInt;
 
   while(isNum(ch)) {
-    buffer[*bufpos] = ch;
+    buffer[bufpos] = ch;
     ch = tokenizerGetChar(sourcefile);
-    (*bufpos)++;
+    bufpos++;
   }
 
   if(ch == '.') { // float, read the rest of the number
-    buffer[*bufpos] = ch;
+    buffer[bufpos] = ch;
     ch = tokenizerGetChar(sourcefile);
-    (*bufpos)++;
+    bufpos++;
 
     if(isNum(ch)) {
       type = TTLitFloat;
 
       while(isNum(ch)) {
-        buffer[*bufpos] = ch;
+        buffer[bufpos] = ch;
         ch = tokenizerGetChar(sourcefile);
-        (*bufpos)++;
+        bufpos++;
       }
 
     } else {
@@ -173,33 +155,19 @@ void eatNumber(FILE* sourcefile, char* buffer, int* bufpos)
     }
   }
 
-  addToken(buffer, *bufpos, type);
-
-  // we have read already the first character of the next token
-  // during the while loop above
-  if(isWhitespace(ch)) { // discard if whitespace
-    *bufpos = 0;
-  } else {
-    buffer[0] = ch;
-    *bufpos = 1;
-  }
+  addToken(buffer, bufpos, type);
+  buffer[0] = tokenizerState.lastChar;
+  return;
 }
-
 
 /*
  * Process tokens constituted of two repeated characters,
  * such as ==, ++, --.
  */
-void eatDoubleSymb(FILE* sourcefile, char* buffer, int* bufpos)
+void eatDoubleSymb(FILE* sourcefile, char* buffer)
 {
-  if(*bufpos > 0) { // add previous token
-    addToken(buffer, *bufpos, TTUnknown);
-    buffer[0] = buffer[*bufpos];
-  }
-  *bufpos = 1;
-
+  int bufpos = 1;
   char ch = tokenizerGetChar(sourcefile);
-
   TokenType type = TTUnknown;
 
   if(ch == buffer[0]) { // double symbol
@@ -212,9 +180,9 @@ void eatDoubleSymb(FILE* sourcefile, char* buffer, int* bufpos)
         break;
     }
 
-    buffer[*bufpos] = ch;
+    buffer[bufpos] = ch;
     addToken(buffer, 2, type);
-    *bufpos = 0;
+    buffer[0] = tokenizerGetChar(sourcefile);
   } else { // single symbol
     switch(buffer[0]) {
       case '=': type = TTAssign;
@@ -227,20 +195,15 @@ void eatDoubleSymb(FILE* sourcefile, char* buffer, int* bufpos)
 
     addToken(buffer, 1, type);
     buffer[0] = ch;
-    *bufpos = 1;
   }
+  return;
 }
 
 /*
  * Process tokens constituted of a single character, like (, ), {, }, etc.
  */
-void eatSingleSymb(FILE* sourcefile, char* buffer, int* bufpos)
+void eatSingleSymb(FILE* sourcefile, char* buffer)
 {
-  if(*bufpos > 0) { // add previous token
-    addToken(buffer, *bufpos, TTUnknown);
-    buffer[0] = buffer[*bufpos];
-    *bufpos = 1;
-  }
   int type = TTUnknown;
 
   switch(buffer[0]) {
@@ -262,57 +225,53 @@ void eatSingleSymb(FILE* sourcefile, char* buffer, int* bufpos)
       break;
   }
 
-  addToken(buffer, *bufpos, type);
-  *bufpos = 0;
+  addToken(buffer, 1, type);
+  buffer[0] = tokenizerGetChar(sourcefile);
+  return;
 }
 
 // Need to improve string eating. Only valid ASCII or UTF-8 strings should
 // be allowed
-void eatDQuote(FILE* sourcefile, char* buffer, int* bufpos)
+void eatDQuote(FILE* sourcefile, char* buffer)
 {
-  if(*bufpos > 0) { // add previous token
-    addToken(buffer, *bufpos, TTUnknown);
-    buffer[0] = buffer[*bufpos];
-    *bufpos = 1;
-  }
-
+  int bufpos = 1;
   char ch = tokenizerGetChar(sourcefile);
+
   while(ch != '\n' && ch != '"') { // read string till end
-    buffer[*bufpos] = ch;
+    buffer[bufpos] = ch;
     ch = tokenizerGetChar(sourcefile);
-    (*bufpos)++;
+    bufpos++;
   }
 
-  if(ch == '\n') { // error: broke line in the middle of string
-    error("Line break in the middle of string.");
-  } else if(ch == '"') {
-    addToken(buffer, *bufpos, TTLitString);
-    *bufpos = 0;
-  }
+  if(ch == '\n') error("Line break in the middle of string.");
+
+  // Here ch == '"'
+  buffer[bufpos] = ch;
+  addToken(buffer, bufpos + 1, TTLitString);
+  buffer[0] = tokenizerGetChar(sourcefile);
+  return;
 }
 
-void eatSlash(FILE* sourcefile, char* buffer, int* bufpos)
+void eatSlash(FILE* sourcefile, char* buffer)
 {
   char ch = tokenizerGetChar(sourcefile);
 
   if(ch == '/') { // it was a comment
-    ch = tokenizerGetChar(sourcefile);
+    tokenizerGetChar(sourcefile);
 
     // discard until newline
-    while(ch != '\n') ch = tokenizerGetChar(sourcefile);
-  } else if(*bufpos > 0) { // not a comment, thus division
-    // adds previous token
-    addToken(buffer, *bufpos, TTUnknown);
-
-    // adds division op.
-    addToken(buffer + (*bufpos), 1, TTDiv);
+    while(tokenizerState.lastChar != '\n') tokenizerGetChar(sourcefile);
+    buffer[0] = tokenizerGetChar(sourcefile);
+  } else { // not a comment, thus division
+    addToken(buffer, 1, TTDiv); // adds division op.
+    buffer[0] = ch;
   }
-  *bufpos = 0; // resets buffer
   return;
 }
 
 void addToken(char * buffer, int size, TokenType type) {
   if(size == 0) return;
+  if(size == 1 && isWhitespace(buffer[0])) return;
 
   int lnum, chnum;
 
