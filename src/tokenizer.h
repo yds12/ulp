@@ -40,6 +40,7 @@ typedef enum enTokenType {
 
   // keywords
   TTIf,
+  TTElse,
   TTFor,
   TTFunc,
   TTWhile,
