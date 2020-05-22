@@ -6,7 +6,13 @@
 #define BUFFER_SIZE 100000
 #define TOKENS_SIZE 1000
 
+/*
+* Function prototypes
+*/
+
 char* filename;
+
+char tokenizerGetChar(FILE* file);
 
 void printFile(FILE* file);
 
@@ -14,7 +20,7 @@ void printTokenInFile(FILE* file, Token token);
 
 void error(char* msg, int lnum, int chnum);
 
-void addToken(char * buffer, int size, TokenType type, int lnum, int chnum);
+void addToken(char * buffer, int size, TokenType type);
 
 int is_whitespace(char character);
 
@@ -42,6 +48,11 @@ void processSlash(FILE* sourcefile, char* buffer, int* bufpos,
 void processDQuote(FILE* sourcefile, char* buffer, int* bufpos,
   int* lnum, int* chnum);
 
+
+/*
+* Functions
+*/
+
 void tokenizer_start(FILE* sourcefile, char* sourcefilename) {
   printFile(sourcefile);
   filename = sourcefilename;
@@ -49,57 +60,67 @@ void tokenizer_start(FILE* sourcefile, char* sourcefilename) {
   // The list of tokens in the source file
   tokens = (Token*) malloc(TOKENS_SIZE * sizeof(Token));
 
+  tokenizerState = (TokenizerState) {
+    .file = sourcefile,
+    .lastChar = '\0',
+    .lnum = 1,
+    .chnum = 1
+  };
+
   // Buffer to read the chars, is reset at the end of each token
   char char_buffer[BUFFER_SIZE];
   int i = 0;
   n_tokens = 0;
-  int lnum = 1; // line number
-  int chnum = 1; // char/column number
   char ch;
 
   while(!feof(sourcefile)) {
-    ch = fgetc(sourcefile);
+    ch = tokenizerGetChar(sourcefile);
+
     char_buffer[i] = ch;
 
-    if(ch == '\n') {
-      lnum++; // increments line
-      chnum = 1;
-    } else chnum++;
-
     if(ch == '/') { // beginning of a comment or division
-      processSlash(sourcefile, char_buffer, &i, &lnum, &chnum);
+      processSlash(sourcefile, char_buffer, &i,
+        &tokenizerState.lnum, &tokenizerState.chnum);
     } else if(ch == '"') { // beginning of a string
-      processDQuote(sourcefile, char_buffer, &i, &lnum, &chnum);
+      processDQuote(sourcefile, char_buffer, &i,
+        &tokenizerState.lnum, &tokenizerState.chnum);
     } else if(ch == '(' || ch == ')' || ch == '{' || ch == '}' ||
       ch == ';' || ch == '*' || ch == '%' || ch == ':') 
     {
-      processSingleSymb(sourcefile, char_buffer, &i, &lnum, &chnum);
+      processSingleSymb(sourcefile, char_buffer, &i,
+        &tokenizerState.lnum, &tokenizerState.chnum);
     } else if(ch == '=' || ch == '+' || ch == '-') {
-      processDoubleSymb(sourcefile, char_buffer, &i, &lnum, &chnum);
+      processDoubleSymb(sourcefile, char_buffer, &i,
+        &tokenizerState.lnum, &tokenizerState.chnum);
     } else if(is_alpha(ch) || ch == '_') { // ID or keyword
-      processIDKW(sourcefile, char_buffer, &i, &lnum, &chnum);
+      processIDKW(sourcefile, char_buffer, &i,
+        &tokenizerState.lnum, &tokenizerState.chnum);
     } else if(is_num(ch)) { // number
-      processNumber(sourcefile, char_buffer, &i, &lnum, &chnum);
+      processNumber(sourcefile, char_buffer, &i,
+        &tokenizerState.lnum, &tokenizerState.chnum);
     } else if(is_whitespace(ch)) {
       if(i > 0) { // end of a token
-        addToken(char_buffer, i, TTUnknown, lnum, chnum);
+        addToken(char_buffer, i, TTUnknown);
       }
       i = 0; // restart buffer
     } else i++;
 
     if(i == BUFFER_SIZE) {
-      error("File too long. Buffer overflowed.", lnum, chnum);
+      error("File too long. Buffer overflowed.", 
+        tokenizerState.lnum, tokenizerState.chnum);
     }
   }
 
+  // Debug info ---------
   for(int i = 0; i < n_tokens; i++) {
-    printf("tt_%d @%d,%d, len: %d, ||%s||\n", tokens[i].type, 
+    printf("\n\ntt_%d @%d,%d, len: %d, ||%s||\n", tokens[i].type, 
       tokens[i].lnum, tokens[i].chnum, tokens[i].name_size, tokens[i].name);
+
+    printTokenInFile(sourcefile, tokens[i]);
   }
   printf("Total tokens: %d\n", n_tokens);
+  // --------------------
 
-  int tokenIdx = n_tokens/2;
-  if(n_tokens > tokenIdx) printTokenInFile(sourcefile, tokens[tokenIdx]);
   fclose(sourcefile);
 }
 
@@ -107,21 +128,19 @@ void processIDKW(FILE* sourcefile, char* buffer, int* bufpos,
   int* lnum, int* chnum)
 {
   if(*bufpos > 0) { // add previous token
-    addToken(buffer, *bufpos, TTUnknown, *lnum, *chnum - *bufpos);
+    addToken(buffer, *bufpos, TTUnknown);
     buffer[0] = buffer[*bufpos];
   }
   *bufpos = 1;
 
-  char ch = fgetc(sourcefile);
-  (*chnum)++;
+  char ch = tokenizerGetChar(sourcefile);
 
   TokenType type = TTId;
 
   while(is_num(ch) || is_alpha(ch) || ch == '_') { // Still ID or keyword
     buffer[*bufpos] = ch;
-    ch = fgetc(sourcefile);
+    ch = tokenizerGetChar(sourcefile);
     (*bufpos)++;
-    (*chnum)++;
   }
 
   switch(*bufpos) {
@@ -152,7 +171,7 @@ void processIDKW(FILE* sourcefile, char* buffer, int* bufpos,
   }
 
   // Add the ID/keyword token
-  addToken(buffer, *bufpos, type, *lnum, *chnum);
+  addToken(buffer, *bufpos, type);
 
   // we have read already the first character of the next token
   // during the while loop above
@@ -168,37 +187,33 @@ void processNumber(FILE* sourcefile, char* buffer, int* bufpos,
   int* lnum, int* chnum)
 {
   if(*bufpos > 0) { // add previous token
-    addToken(buffer, *bufpos, TTUnknown, *lnum, *chnum - *bufpos);
+    addToken(buffer, *bufpos, TTUnknown);
     buffer[0] = buffer[*bufpos];
   }
   *bufpos = 1;
 
-  char ch = fgetc(sourcefile);
-  (*chnum)++;
+  char ch = tokenizerGetChar(sourcefile);
 
   TokenType type = TTLitInt;
 
   while(is_num(ch)) {
     buffer[*bufpos] = ch;
-    ch = fgetc(sourcefile);
+    ch = tokenizerGetChar(sourcefile);
     (*bufpos)++;
-    (*chnum)++;
   }
 
   if(ch == '.') { // float, read the rest of the number
     buffer[*bufpos] = ch;
-    ch = fgetc(sourcefile);
+    ch = tokenizerGetChar(sourcefile);
     (*bufpos)++;
-    (*chnum)++;
 
     if(is_num(ch)) {
       type = TTLitFloat;
 
       while(is_num(ch)) {
         buffer[*bufpos] = ch;
-        ch = fgetc(sourcefile);
+        ch = tokenizerGetChar(sourcefile);
         (*bufpos)++;
-        (*chnum)++;
       }
 
     } else {
@@ -206,7 +221,7 @@ void processNumber(FILE* sourcefile, char* buffer, int* bufpos,
     }
   }
 
-  addToken(buffer, *bufpos, type, *lnum, *chnum);
+  addToken(buffer, *bufpos, type);
 
   // we have read already the first character of the next token
   // during the while loop above
@@ -222,13 +237,12 @@ void processDoubleSymb(FILE* sourcefile, char* buffer, int* bufpos,
   int* lnum, int* chnum)
 {
   if(*bufpos > 0) { // add previous token
-    addToken(buffer, *bufpos, TTUnknown, *lnum, *chnum - *bufpos);
+    addToken(buffer, *bufpos, TTUnknown);
     buffer[0] = buffer[*bufpos];
   }
   *bufpos = 1;
 
-  char ch = fgetc(sourcefile);
-  (*chnum)++;
+  char ch = tokenizerGetChar(sourcefile);
 
   TokenType type = TTUnknown;
 
@@ -243,7 +257,7 @@ void processDoubleSymb(FILE* sourcefile, char* buffer, int* bufpos,
     }
 
     buffer[*bufpos] = ch;
-    addToken(buffer, 2, TTEq, *lnum, *chnum);
+    addToken(buffer, 2, type);
     *bufpos = 0;
   } else { // single symbol
     switch(buffer[0]) {
@@ -255,9 +269,9 @@ void processDoubleSymb(FILE* sourcefile, char* buffer, int* bufpos,
         break;
     }
 
-    addToken(buffer, 1, TTAssign, *lnum, *chnum);
-    *bufpos = 0;
-    buffer[*bufpos] = ch;
+    addToken(buffer, 1, type);
+    buffer[0] = ch;
+    *bufpos = 1;
   }
 }
 
@@ -265,7 +279,7 @@ void processSingleSymb(FILE* sourcefile, char* buffer, int* bufpos,
   int* lnum, int* chnum)
 {
   if(*bufpos > 0) { // add previous token
-    addToken(buffer, *bufpos, TTUnknown, *lnum, *chnum - *bufpos);
+    addToken(buffer, *bufpos, TTUnknown);
     buffer[0] = buffer[*bufpos];
     *bufpos = 1;
   }
@@ -290,7 +304,7 @@ void processSingleSymb(FILE* sourcefile, char* buffer, int* bufpos,
       break;
   }
 
-  addToken(buffer, *bufpos, type, *lnum, *chnum - 1);
+  addToken(buffer, *bufpos, type);
   *bufpos = 0;
 }
 
@@ -300,25 +314,22 @@ void processDQuote(FILE* sourcefile, char* buffer, int* bufpos,
   int* lnum, int* chnum)
 {
   if(*bufpos > 0) { // add previous token
-    addToken(buffer, *bufpos, TTUnknown, *lnum, *chnum - *bufpos);
+    addToken(buffer, *bufpos, TTUnknown);
     buffer[0] = buffer[*bufpos];
     *bufpos = 1;
   }
 
-  char ch = fgetc(sourcefile);
+  char ch = tokenizerGetChar(sourcefile);
   while(ch != '\n' && ch != '"') { // read string till end
     buffer[*bufpos] = ch;
-    ch = fgetc(sourcefile);
+    ch = tokenizerGetChar(sourcefile);
     (*bufpos)++;
-    (*chnum)++;
   }
 
   if(ch == '\n') { // error: broke line in the middle of string
-    (*lnum)++;
-    *chnum = 1;
     error("Line break in the middle of string.", *lnum, *chnum);
   } else if(ch == '"') {
-    addToken(buffer, *bufpos, TTLitString, *lnum, *chnum);
+    addToken(buffer, *bufpos, TTLitString);
     *bufpos = 0;
   }
 }
@@ -326,27 +337,42 @@ void processDQuote(FILE* sourcefile, char* buffer, int* bufpos,
 void processSlash(FILE* sourcefile, char* buffer, int* bufpos,
   int* lnum, int* chnum)
 {
-  char ch = fgetc(sourcefile);
+  char ch = tokenizerGetChar(sourcefile);
 
   if(ch == '/') { // it was a comment
-    ch = fgetc(sourcefile);
-    while(ch != '\n') ch = fgetc(sourcefile); // discard until newline
-    (*lnum)++;
-    *chnum = 1;
+    ch = tokenizerGetChar(sourcefile);
+
+    // discard until newline
+    while(ch != '\n') ch = tokenizerGetChar(sourcefile);
   } else if(*bufpos > 0) { // not a comment, thus division
-    addToken(buffer, *bufpos, TTUnknown, *lnum, *chnum); // adds previous token
-    addToken(buffer + (*bufpos), 1, TTDiv, *lnum, *chnum); // adds division op.
+    // adds previous token
+    addToken(buffer, *bufpos, TTUnknown);
+
+    // adds division op.
+    addToken(buffer + (*bufpos), 1, TTDiv);
   }
   *bufpos = 0; // resets buffer
   return;
 }
 
-void addToken(char * buffer, int size, TokenType type, int lnum, int chnum) {
+void addToken(char * buffer, int size, TokenType type) {
   if(size == 0) return;
+
+  int lnum, chnum;
+
+  if(tokenizerState.lastChar == '\n') {
+    lnum = tokenizerState.prevLnum;
+    chnum = tokenizerState.prevChnum - size - 1;
+  } else {
+    lnum = tokenizerState.lnum;
+    chnum = tokenizerState.chnum - size - 1;
+  }
+
   char* tokenName = (char*) malloc((size + 1) * sizeof(char));
   Token token = { tokenName, size, type, lnum, chnum };
   strncpy(tokenName, buffer, size);
   token.name[size] = '\0';
+
   tokens[n_tokens] = token;
   n_tokens++;
 }
@@ -367,6 +393,24 @@ int is_alpha(char character) {
 int is_num(char character) {
   if(character >= '0' && character <= '9') return 1;
   return 0;
+}
+
+char tokenizerGetChar(FILE* file) {
+  if(!feof(file)) {
+    char ch = fgetc(file);
+    tokenizerState.lastChar = ch;
+    tokenizerState.prevLnum = tokenizerState.lnum;
+    tokenizerState.prevChnum = tokenizerState.chnum;
+
+    if(ch == '\n') {
+      tokenizerState.lnum++;
+      tokenizerState.chnum = 1;
+    } else {
+      tokenizerState.chnum++;
+    }
+    return ch;
+  }
+  else return EOF;
 }
 
 void printTokenInFile(FILE* file, Token token) {

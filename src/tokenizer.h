@@ -8,6 +8,17 @@ typedef struct stToken {
   int chnum;
 } Token;
 
+typedef struct stTokenizerState {
+  FILE* file;
+  char lastChar;
+  int lnum;
+  int chnum;
+  int prevLnum;
+  int prevChnum;
+} TokenizerState;
+
+TokenizerState tokenizerState;
+
 Token* tokens;
 int n_tokens;
 
