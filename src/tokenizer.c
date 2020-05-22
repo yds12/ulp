@@ -43,6 +43,7 @@ void tokenizer_start(FILE* sourcefile, char* sourcefilename) {
   char ch;
 
   while(!feof(sourcefile)) {
+//  printf("new loop\n");
     ch = fgetc(sourcefile);
     char_buffer[i] = ch;
 
@@ -93,8 +94,8 @@ void processSingleSymb(FILE* sourcefile, char* buffer, int* bufpos,
 void processDQuote(FILE* sourcefile, char* buffer, int* bufpos,
   int* lnum, int* chnum)
 {
-printf("processing... char||%c|| 1st||%c|| pos:%d\n", 
-  buffer[*bufpos], buffer[0], *bufpos);
+//printf("processing... char||%c|| 1st||%c|| pos:%d\n", 
+//  buffer[*bufpos], buffer[0], *bufpos);
 
   if(*bufpos > 0) { // add previous token
     addToken(buffer, *bufpos, *lnum, *chnum - *bufpos);
@@ -115,9 +116,10 @@ printf("processing... char||%c|| 1st||%c|| pos:%d\n",
     *chnum = 1;
     error("Line break in the middle of string.", *lnum, *chnum);
   } else if(ch == '"') {
-printf("adding... char||%c|| 1st||%c|| pos:%d\n", 
-  buffer[*bufpos], buffer[0], *bufpos);
+//printf("adding dquote2... char||%c|| 1st||%c|| pos:%d\n", 
+//  buffer[*bufpos], buffer[0], *bufpos);
     addToken(buffer, *bufpos, *lnum, *chnum);
+    *bufpos = 0;
   }
 }
 
@@ -141,6 +143,8 @@ void processSlash(FILE* sourcefile, char* buffer, int* bufpos,
 
 Token addToken(char * buffer, int size, int lnum, int chnum) {
 //  printf("Generating token:%.*s\n", size, buffer);
+//  printf("char:||%c||, 1st:||%c||, size:%d\n", buffer[size - 1], buffer[0],
+//    size);
 
   char* tokenName = (char*) malloc((size + 1) * sizeof(char));
   Token token = { tokenName, size, TTYPE_UNKNOWN, lnum, chnum };
