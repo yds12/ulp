@@ -8,6 +8,8 @@
 
 char* filename;
 
+void printFile(FILE* file);
+
 void printTokenInFile(FILE* file, Token token);
 
 void error(char* msg, int lnum, int chnum);
@@ -41,6 +43,7 @@ void processDQuote(FILE* sourcefile, char* buffer, int* bufpos,
   int* lnum, int* chnum);
 
 void tokenizer_start(FILE* sourcefile, char* sourcefilename) {
+  printFile(sourcefile);
   filename = sourcefilename;
 
   // The list of tokens in the source file
@@ -164,7 +167,55 @@ void processIDKW(FILE* sourcefile, char* buffer, int* bufpos,
 void processNumber(FILE* sourcefile, char* buffer, int* bufpos, 
   int* lnum, int* chnum)
 {
-  printf("A number started\n");
+  if(*bufpos > 0) { // add previous token
+    addToken(buffer, *bufpos, TTUnknown, *lnum, *chnum - *bufpos);
+    buffer[0] = buffer[*bufpos];
+  }
+  *bufpos = 1;
+
+  char ch = fgetc(sourcefile);
+  (*chnum)++;
+
+  TokenType type = TTLitInt;
+
+  while(is_num(ch)) {
+    buffer[*bufpos] = ch;
+    ch = fgetc(sourcefile);
+    (*bufpos)++;
+    (*chnum)++;
+  }
+
+  if(ch == '.') { // float, read the rest of the number
+    buffer[*bufpos] = ch;
+    ch = fgetc(sourcefile);
+    (*bufpos)++;
+    (*chnum)++;
+
+    if(is_num(ch)) {
+      type = TTLitFloat;
+
+      while(is_num(ch)) {
+        buffer[*bufpos] = ch;
+        ch = fgetc(sourcefile);
+        (*bufpos)++;
+        (*chnum)++;
+      }
+
+    } else {
+      error("Invalid number.", *lnum, *chnum);
+    }
+  }
+
+  addToken(buffer, *bufpos, type, *lnum, *chnum);
+
+  // we have read already the first character of the next token
+  // during the while loop above
+  if(is_whitespace(ch)) { // discard if whitespace
+    *bufpos = 0;
+  } else {
+    buffer[0] = ch;
+    *bufpos = 1;
+  }
 }
 
 void processDoubleSymb(FILE* sourcefile, char* buffer, int* bufpos, 
@@ -356,6 +407,18 @@ void printTokenInFile(FILE* file, Token token) {
   printf("%s:%d:%d:\n\n", filename, token.lnum, token.chnum);
   printf("%s", buff);
   printf("%s\n", buff_mark);
+}
+
+void printFile(FILE* file) {
+  rewind(file);
+  char ch = fgetc(file);
+
+  while(!feof(file)) {
+    printf("%c", ch);
+    ch = fgetc(file);
+  }
+  printf("\n");
+  rewind(file);
 }
 
 void error(char* msg, int lnum, int chnum) {
