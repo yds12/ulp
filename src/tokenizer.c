@@ -8,6 +8,8 @@
 
 char* filename;
 
+void printTokenInFile(FILE* file, Token token);
+
 void error(char* msg, int lnum, int chnum);
 
 void addToken(char * buffer, int size, TokenType type, int lnum, int chnum);
@@ -92,6 +94,10 @@ void tokenizer_start(FILE* sourcefile, char* sourcefilename) {
       tokens[i].lnum, tokens[i].chnum, tokens[i].name_size, tokens[i].name);
   }
   printf("Total tokens: %d\n", n_tokens);
+
+  int tokenIdx = n_tokens/2;
+  if(n_tokens > tokenIdx) printTokenInFile(sourcefile, tokens[tokenIdx]);
+  fclose(sourcefile);
 }
 
 void processIDKW(FILE* sourcefile, char* buffer, int* bufpos, 
@@ -310,6 +316,46 @@ int is_alpha(char character) {
 int is_num(char character) {
   if(character >= '0' && character <= '9') return 1;
   return 0;
+}
+
+void printTokenInFile(FILE* file, Token token) {
+  rewind(file);
+
+  int BUFF_SIZE = 80;
+  char buff[BUFF_SIZE + 1];
+  char buff_mark[BUFF_SIZE + 1];
+
+  for(int i = 0; i < BUFF_SIZE; i++) {
+    buff[i] = '\0';
+    buff_mark[i] = '\0';
+  }
+
+  int lnum = 1;
+  int chnum = 1;
+  while(!feof(file)) {
+    char ch = fgetc(file);
+
+    if(lnum == token.lnum) {
+      if(chnum < BUFF_SIZE) buff[chnum - 1] = ch;
+    } else if(lnum > token.lnum) break;
+
+    if(ch == '\n') {
+      lnum++;
+      chnum = 1;
+    } else chnum++;
+  }
+
+  for(int i = 0; i < BUFF_SIZE; i++) {
+    if(i + 1 < token.chnum || i + 1 >= token.chnum + token.name_size) {
+      buff_mark[i] = ' '; 
+    }
+    else buff_mark[i] = '^';
+  }
+
+  printf("\nToken '%s':\n", token.name);
+  printf("%s:%d:%d:\n\n", filename, token.lnum, token.chnum);
+  printf("%s", buff);
+  printf("%s\n", buff_mark);
 }
 
 void error(char* msg, int lnum, int chnum) {

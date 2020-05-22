@@ -21,6 +21,5 @@ int main(int argc, char ** argv) {
   }
 
   tokenizer_start(sourcefile, filename);
-  fclose(sourcefile);
   return 0;
 }

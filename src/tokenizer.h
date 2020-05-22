@@ -8,6 +8,9 @@ typedef struct stToken {
   int chnum;
 } Token;
 
+Token* tokens;
+int n_tokens;
+
 typedef enum enTokenType {
   TTUnknown,
   TTId,
@@ -54,6 +57,3 @@ typedef enum enTokenType {
   TTOr,
   TTNot
 } TokenType;
-
-Token* tokens;
-int n_tokens;
