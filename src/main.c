@@ -20,6 +20,6 @@ int main(int argc, char ** argv) {
     filename = argv[1];
   }
 
-  tokenizer_start(sourcefile, filename);
+  tokenizerStart(sourcefile, filename);
   return 0;
 }

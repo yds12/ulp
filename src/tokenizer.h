@@ -1,8 +1,10 @@
-void tokenizer_start(FILE* sourcefile, char* filename);
+void tokenizerStart(FILE* sourcefile, char* filename);
+
+char* filename;
 
 typedef struct stToken {
   char * name;
-  int name_size;
+  int nameSize;
   short type;
   int lnum;
   int chnum;
@@ -68,3 +70,12 @@ typedef enum enTokenType {
   TTOr,
   TTNot
 } TokenType;
+
+void printFile(FILE* file);
+void printTokenInFile(FILE* file, Token token);
+void error(char* msg);
+int isWhitespace(char character);
+int isAlpha(char character);
+int isNum(char character);
+int isSingleCharOp(char character);
+int belongsToDoubleOp(char character);
