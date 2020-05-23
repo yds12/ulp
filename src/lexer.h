@@ -1,7 +1,9 @@
-void lexerStart(FILE* sourcefile, char* filename);
+/*
+ * Header file for the lexer and lexer related functions, structs, enums
+ * and global variables.
+ */
 
-char* filename;
-
+// Represents a token.
 typedef struct stToken {
   char * name;
   int nameSize;
@@ -10,7 +12,9 @@ typedef struct stToken {
   int chnum;
 } Token;
 
+// Represents the global state of the lexer.
 typedef struct stLexerState {
+  char* buffer;
   FILE* file;
   char lastChar;
   int lnum;      // this should always point to the line of the last char read
@@ -19,11 +23,23 @@ typedef struct stLexerState {
   int prevChnum;
 } LexerState;
 
+/*
+ * Global lexer variables.
+ */
+
+// file being manipulated.
+char* filename;
+
+// Global state of the lexer.
 LexerState lexerState;
 
+// List of tokens processed.
 Token* tokens;
+
+// Number of tokens processed.
 int n_tokens;
 
+// Represents the types of tokens allowed in the language.
 typedef enum enTokenType {
   TTUnknown,
   TTId,
@@ -71,11 +87,88 @@ typedef enum enTokenType {
   TTNot
 } TokenType;
 
+/*
+ * Starts the lexer.
+ *
+ * sourcefile: pointer to the source file to process (file should be already
+ *   open for reading/text mode). The file will be closed at the end by this
+ *   function.
+ * sourcefilename: name of the source file, used for messages.
+ *
+ */
+void lexerStart(FILE* sourcefile, char* filename);
+
+/*
+ * Prints a text file. 
+ *
+ * file: pointer to the file (should be open, will be rewinded and
+ *   will not be closed).
+ *
+ */
 void printFile(FILE* file);
+
+/*
+ * Prints the line where the token is located and highlights the token. 
+ *
+ * file: pointer to the source file (should be open, will be rewinded and
+ *   will not be closed).
+ * token: the token to be printed.
+ *
+ */
 void printTokenInFile(FILE* file, Token token);
+
+/*
+ * Prints an error message and exits the program with exit code 1. 
+ *
+ * msg: message to be printed. 
+ *
+ */
 void error(char* msg);
+
+/*
+ * Checks whether a character is whitespace. 
+ *
+ * character: the character to be checked.
+ * returns: 1 if it is, 0 otherwise.
+ *
+ */
 int isWhitespace(char character);
+
+/*
+ * Checks whether a character is a letter (ASCII only). 
+ *
+ * character: the character to be checked.
+ * returns: 1 if it is, 0 otherwise.
+ *
+ */
 int isAlpha(char character);
+
+/*
+ * Checks whether a character is a number. 
+ *
+ * character: the character to be checked.
+ * returns: 1 if it is, 0 otherwise.
+ *
+ */
 int isNum(char character);
+
+/*
+ * Checks whether a character is one of the single character tokens, such
+ * as (, ), %, ;, etc. 
+ *
+ * character: the character to be checked.
+ * returns: 1 if it is, 0 otherwise.
+ *
+ */
 int isSingleCharOp(char character);
+
+/*
+ * Checks whether a character could be part of a "double" operator, such
+ * as ==, ++ or --. 
+ *
+ * character: the character to be checked.
+ * returns: 1 if it is, 0 otherwise.
+ *
+ */
 int belongsToDoubleOp(char character);
+

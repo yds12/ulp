@@ -1,49 +1,114 @@
+/*
+ *
+ * Main file for the lexer of the compiler. The specification of the
+ * valid language tokens is at docs/lexicon.txt.
+ *
+ */
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include "lexer.h"
 
+/*
+ * Reads the next character of the source file and manages the related
+ * lexer state variables.
+ *
+ * returns: the character read or EOF.
+ *
+ */
+char lexerGetChar();
+
+/*
+ * Adds a new token to the list of processed tokens. 
+ *
+ * size: the amount of characters (bytes) in this token.
+ * type: type of token (identifier, integer literal, AND operator, etc.)
+ * lnum: line number where this token was found.
+ * chnum: position/column number where the token was found in the line.
+ *
+ */
+void addToken(int size, TokenType type, int lnum, int chnum);
+
+/*
+ * Processes identifiers and keywords.
+ *
+ */
+void eatIDKW();
+
+/*
+ * Processes integers and float number literals.
+ *
+ */
+void eatNumber();
+
+/*
+ * Processes comments and the division operator. 
+ *
+ */
+void eatSlash(); 
+
+/*
+ * Processes tokens constituted of a single character, like (, ), {, }, etc.
+ *
+ *
+ * Note: Need to improve string eating. Only valid ASCII or UTF-8 
+ * strings should be allowed.
+ *
+ */
+void eatDQuote();
+
+/*
+ * Processes tokens constituted of a single character, like (, ), {, }, etc.
+ *
+ */
+void eatSingleSymb();
+
+/*
+ * Processes tokens constituted of two repeated characters,
+ * such as ==, ++, --.
+ *
+ */
+void eatDoubleSymb();
+
+// Size of the buffer used to read characters
 #define BUFFER_SIZE 100000
-#define TOKENS_SIZE 1000
 
-/*
-* Function prototypes
-*/
+// Maximum number of tokens.
+#define MAX_TOKENS 1000
 
-char lexerGetChar(FILE* file);
-void addToken(char* buffer, int size, TokenType type, int lnum, int chnum);
-void eatIDKW(FILE* sourcefile, char* buffer);
-void eatNumber(FILE* sourcefile, char* buffer);
-void eatSlash(FILE* sourcefile, char* buffer); 
-void eatDQuote(FILE* sourcefile, char* buffer);
-void eatSingleSymb(FILE* sourcefile, char* buffer);
-void eatDoubleSymb(FILE* sourcefile, char* buffer);
+// To show debug messages:
+#define DEBUG
 
-/*
-* Functions
-*/
 
 void lexerStart(FILE* sourcefile, char* sourcefilename) {
+
+// Prints the source file
+#ifdef DEBUG
   printFile(sourcefile);
+#endif
+
   filename = sourcefilename;
 
   // The list of tokens in the source file
-  tokens = (Token*) malloc(TOKENS_SIZE * sizeof(Token));
+  tokens = (Token*) malloc(MAX_TOKENS * sizeof(Token));
 
+  // Buffer to read the chars, is reset at the end of each token
+  char charBuffer[BUFFER_SIZE];
+  n_tokens = 0; // number of tokens processed so far
+
+  // Holds global state variables of the lexer
   lexerState = (LexerState) {
+    .buffer = charBuffer,
     .file = sourcefile,
     .lastChar = '\0',
     .lnum = 1,
     .chnum = 1
   };
 
-  // Buffer to read the chars, is reset at the end of each token
-  char charBuffer[BUFFER_SIZE];
-  n_tokens = 0;
-
-  // start with the first character
+  // starts with the first character
   if(!feof(sourcefile)) {
-    charBuffer[0] = lexerGetChar(sourcefile);
+    charBuffer[0] = lexerGetChar();
   }
 
   while(!feof(sourcefile)) {
@@ -52,18 +117,17 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
     // depending on the character read, call a method to process next token(s)
     // All functions should finish with the next character in buffer[0],
     // and lexerState.chnum as the position (column) of buffer[0]
-    if(ch == '/') eatSlash(sourcefile, charBuffer);
-    else if(ch == '"') eatDQuote(sourcefile, charBuffer);
-    else if(isSingleCharOp(ch)) eatSingleSymb(sourcefile, charBuffer);
-    else if(belongsToDoubleOp(ch)) eatDoubleSymb(sourcefile, charBuffer);
-    else if(isAlpha(ch) || ch == '_') eatIDKW(sourcefile, charBuffer);
-    else if(isNum(ch)) eatNumber(sourcefile, charBuffer);
-    else if(isWhitespace(ch)) {
-      charBuffer[0] = lexerGetChar(sourcefile);
-    }
+    if(ch == '/') eatSlash();
+    else if(ch == '"') eatDQuote();
+    else if(isSingleCharOp(ch)) eatSingleSymb();
+    else if(belongsToDoubleOp(ch)) eatDoubleSymb();
+    else if(isAlpha(ch) || ch == '_') eatIDKW();
+    else if(isNum(ch)) eatNumber();
+    else if(isWhitespace(ch)) charBuffer[0] = lexerGetChar();
   }
 
-  // Debug info ---------
+// Prints info about the tokens processed
+#ifdef DEBUG
   for(int i = 0; i < n_tokens; i++) {
     printf("\n\n");
     printf("tt_%d @%d,%d, len: %d, ||%s||\n", tokens[i].type, 
@@ -72,25 +136,23 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
     printTokenInFile(sourcefile, tokens[i]);
   }
   printf("Total tokens: %d\n", n_tokens);
-  // --------------------
+#endif
 
   fclose(sourcefile);
 }
 
-/*
- * Process identifiers and keywords 
- */
-void eatIDKW(FILE* sourcefile, char* buffer)
+void eatIDKW()
 {
   int bufpos = 1;
+  char* buffer = lexerState.buffer;
   int lnum = lexerState.lnum;
   int chnum = lexerState.chnum;
-  char ch = lexerGetChar(sourcefile);
+  char ch = lexerGetChar();
   TokenType type = TTId;
 
   while(isNum(ch) || isAlpha(ch) || ch == '_') { // Still ID or keyword
     buffer[bufpos] = ch;
-    ch = lexerGetChar(sourcefile);
+    ch = lexerGetChar();
     bufpos++;
   }
 
@@ -122,28 +184,29 @@ void eatIDKW(FILE* sourcefile, char* buffer)
   }
 
   // Add the ID/keyword token
-  addToken(buffer, bufpos, type, lnum, chnum);
+  addToken(bufpos, type, lnum, chnum);
   buffer[0] = lexerState.lastChar;
   return;
 }
 
-void eatNumber(FILE* sourcefile, char* buffer)
+void eatNumber()
 {
   int bufpos = 1;
+  char* buffer = lexerState.buffer;
   int lnum = lexerState.lnum;
   int chnum = lexerState.chnum;
-  char ch = lexerGetChar(sourcefile);
+  char ch = lexerGetChar();
   TokenType type = TTLitInt;
 
   while(isNum(ch)) {
     buffer[bufpos] = ch;
-    ch = lexerGetChar(sourcefile);
+    ch = lexerGetChar();
     bufpos++;
   }
 
   if(ch == '.') { // float, read the rest of the number
     buffer[bufpos] = ch;
-    ch = lexerGetChar(sourcefile);
+    ch = lexerGetChar();
     bufpos++;
 
     if(isNum(ch)) {
@@ -151,7 +214,7 @@ void eatNumber(FILE* sourcefile, char* buffer)
 
       while(isNum(ch)) {
         buffer[bufpos] = ch;
-        ch = lexerGetChar(sourcefile);
+        ch = lexerGetChar();
         bufpos++;
       }
 
@@ -160,21 +223,19 @@ void eatNumber(FILE* sourcefile, char* buffer)
     }
   }
 
-  addToken(buffer, bufpos, type, lnum, chnum);
+  addToken(bufpos, type, lnum, chnum);
   buffer[0] = lexerState.lastChar;
   return;
 }
 
-/*
- * Process tokens constituted of two repeated characters,
- * such as ==, ++, --.
- */
-void eatDoubleSymb(FILE* sourcefile, char* buffer)
+void eatDoubleSymb()
 {
   int bufpos = 1;
+  char* buffer = lexerState.buffer;
   int lnum = lexerState.lnum;
   int chnum = lexerState.chnum;
-  char ch = lexerGetChar(sourcefile);
+
+  char ch = lexerGetChar();
   TokenType type = TTUnknown;
 
   if(ch == buffer[0]) { // double symbol
@@ -188,8 +249,8 @@ void eatDoubleSymb(FILE* sourcefile, char* buffer)
     }
 
     buffer[bufpos] = ch;
-    addToken(buffer, 2, type, lnum, chnum);
-    buffer[0] = lexerGetChar(sourcefile);
+    addToken(2, type, lnum, chnum);
+    buffer[0] = lexerGetChar();
   } else { // single symbol
     switch(buffer[0]) {
       case '=': type = TTAssign;
@@ -200,17 +261,15 @@ void eatDoubleSymb(FILE* sourcefile, char* buffer)
         break;
     }
 
-    addToken(buffer, 1, type, lnum, chnum);
+    addToken(1, type, lnum, chnum);
     buffer[0] = ch;
   }
   return;
 }
 
-/*
- * Process tokens constituted of a single character, like (, ), {, }, etc.
- */
-void eatSingleSymb(FILE* sourcefile, char* buffer)
+void eatSingleSymb()
 {
+  char* buffer = lexerState.buffer;
   int lnum = lexerState.lnum;
   int chnum = lexerState.chnum;
   int type = TTUnknown;
@@ -234,23 +293,22 @@ void eatSingleSymb(FILE* sourcefile, char* buffer)
       break;
   }
 
-  addToken(buffer, 1, type, lnum, chnum);
-  buffer[0] = lexerGetChar(sourcefile);
+  addToken(1, type, lnum, chnum);
+  buffer[0] = lexerGetChar();
   return;
 }
 
-// Need to improve string eating. Only valid ASCII or UTF-8 strings should
-// be allowed
-void eatDQuote(FILE* sourcefile, char* buffer)
+void eatDQuote()
 {
   int bufpos = 1;
+  char* buffer = lexerState.buffer;
   int lnum = lexerState.lnum;
   int chnum = lexerState.chnum;
-  char ch = lexerGetChar(sourcefile);
+  char ch = lexerGetChar();
 
   while(ch != '\n' && ch != '"') { // read string till end
     buffer[bufpos] = ch;
-    ch = lexerGetChar(sourcefile);
+    ch = lexerGetChar();
     bufpos++;
   }
 
@@ -258,37 +316,38 @@ void eatDQuote(FILE* sourcefile, char* buffer)
 
   // Here ch == '"'
   buffer[bufpos] = ch;
-  addToken(buffer, bufpos + 1, TTLitString, lnum, chnum);
-  buffer[0] = lexerGetChar(sourcefile);
+  addToken(bufpos + 1, TTLitString, lnum, chnum);
+  buffer[0] = lexerGetChar();
   return;
 }
 
-void eatSlash(FILE* sourcefile, char* buffer)
+void eatSlash()
 {
+  char* buffer = lexerState.buffer;
   int lnum = lexerState.lnum;
   int chnum = lexerState.chnum;
-  char ch = lexerGetChar(sourcefile);
+  char ch = lexerGetChar();
 
   if(ch == '/') { // it was a comment
-    lexerGetChar(sourcefile);
+    lexerGetChar();
 
     // discard until newline
-    while(lexerState.lastChar != '\n') lexerGetChar(sourcefile);
-    buffer[0] = lexerGetChar(sourcefile);
+    while(lexerState.lastChar != '\n') lexerGetChar();
+    buffer[0] = lexerGetChar();
   } else { // not a comment, thus division
-    addToken(buffer, 1, TTDiv, lnum, chnum); // adds division op.
+    addToken(1, TTDiv, lnum, chnum); // adds division op.
     buffer[0] = ch;
   }
   return;
 }
 
-void addToken(char * buffer, int size, TokenType type, int lnum, int chnum) {
+void addToken(int size, TokenType type, int lnum, int chnum) {
   char* tokenName = (char*) malloc((size + 1) * sizeof(char));
   Token token = { tokenName, size, type, lnum, chnum };
-  strncpy(tokenName, buffer, size);
+  strncpy(tokenName, lexerState.buffer, size);
   token.name[size] = '\0';
 
-  if(n_tokens >= TOKENS_SIZE) {
+  if(n_tokens >= MAX_TOKENS) {
     error("Too many tokens.");
   }
   tokens[n_tokens] = token;
@@ -325,9 +384,9 @@ int isSingleCharOp(char ch) {
   return 0;
 }
 
-char lexerGetChar(FILE* file) {
-  if(!feof(file)) {
-    char ch = fgetc(file);
+char lexerGetChar() {
+  if(!feof(lexerState.file)) {
+    char ch = fgetc(lexerState.file);
     lexerState.lastChar = ch;
     lexerState.prevLnum = lexerState.lnum;
     lexerState.prevChnum = lexerState.chnum;
@@ -350,7 +409,7 @@ void printTokenInFile(FILE* file, Token token) {
   char buff[BUFF_SIZE + 1];
   char buff_mark[BUFF_SIZE + 1];
 
-  for(int i = 0; i < BUFF_SIZE; i++) {
+  for(int i = 0; i <= BUFF_SIZE; i++) {
     buff[i] = '\0';
     buff_mark[i] = '\0';
   }
@@ -400,3 +459,4 @@ void error(char* msg) {
     lexerState.lnum, lexerState.chnum);
   exit(1);
 }
+
