@@ -8,4 +8,4 @@ into *lexer* (process the input and generates a list of tokens), *parser*
 [Abstract Syntax Tree](https://en.wikipedia.org/wiki/Abstract_syntax_tree)
 -- or AST) and *code generator* (generates x64 assembly code targeted at
 Linux). The resulting assembly will be processed by `nasm` into object 
-code, and linked with `ld`.
+code, and then linked with `ld`.
