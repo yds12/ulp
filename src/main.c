@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "tokenizer.h"
+#include "lexer.h"
 
 int main(int argc, char ** argv) {
   // check arguments
@@ -20,6 +20,6 @@ int main(int argc, char ** argv) {
     filename = argv[1];
   }
 
-  tokenizerStart(sourcefile, filename);
+  lexerStart(sourcefile, filename);
   return 0;
 }

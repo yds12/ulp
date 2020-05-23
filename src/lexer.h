@@ -1,4 +1,4 @@
-void tokenizerStart(FILE* sourcefile, char* filename);
+void lexerStart(FILE* sourcefile, char* filename);
 
 char* filename;
 
@@ -10,16 +10,16 @@ typedef struct stToken {
   int chnum;
 } Token;
 
-typedef struct stTokenizerState {
+typedef struct stLexerState {
   FILE* file;
   char lastChar;
-  int lnum;
-  int chnum;
+  int lnum;      // this should always point to the line of the last char read
+  int chnum;     // this should always point to the position of the last char
   int prevLnum;
   int prevChnum;
-} TokenizerState;
+} LexerState;
 
-TokenizerState tokenizerState;
+LexerState lexerState;
 
 Token* tokens;
 int n_tokens;
