@@ -14,6 +14,7 @@ typedef struct stToken {
 
 // Represents the global state of the lexer.
 typedef struct stLexerState {
+  int maxTokens; // current size of the array of tokens
   char* buffer;
   FILE* file;
   char lastChar;

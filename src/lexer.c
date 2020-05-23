@@ -74,8 +74,8 @@ void eatDoubleSymb();
 // Size of the buffer used to read characters
 #define BUFFER_SIZE 100000
 
-// Maximum number of tokens.
-#define MAX_TOKENS 1000
+// Used to decide how much memory to allocate for tokens, at first.
+#define INITIAL_MAX_TOKENS 250
 
 // To show debug messages:
 #define DEBUG
@@ -91,7 +91,7 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
   filename = sourcefilename;
 
   // The list of tokens in the source file
-  tokens = (Token*) malloc(MAX_TOKENS * sizeof(Token));
+  tokens = (Token*) malloc(INITIAL_MAX_TOKENS * sizeof(Token));
 
   // Buffer to read the chars, is reset at the end of each token
   char charBuffer[BUFFER_SIZE];
@@ -99,6 +99,7 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
 
   // Holds global state variables of the lexer
   lexerState = (LexerState) {
+    .maxTokens = INITIAL_MAX_TOKENS,
     .buffer = charBuffer,
     .file = sourcefile,
     .lastChar = '\0',
@@ -347,8 +348,12 @@ void addToken(int size, TokenType type, int lnum, int chnum) {
   strncpy(tokenName, lexerState.buffer, size);
   token.name[size] = '\0';
 
-  if(n_tokens >= MAX_TOKENS) {
-    error("Too many tokens.");
+  if(n_tokens >= lexerState.maxTokens) {
+    // doubles the size of the array of tokens
+    tokens = (Token*) realloc(
+      tokens, sizeof(Token) * lexerState.maxTokens * 2);
+
+    lexerState.maxTokens *= 2;
   }
   tokens[n_tokens] = token;
   n_tokens++;
