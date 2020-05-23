@@ -1,4 +1,4 @@
-id := first_id_char
+IDENTIFIER := first_id_char
     | first_id_char id_chars
 
 first_id_char := <any of: a-z A-Z _>
@@ -7,7 +7,7 @@ id_chars := id_char | id_char id_chars
 
 id_char := <any of: a-z A-Z 0-9 _>
 
-literal := int_literal
+LITERAL := int_literal
          | float_literal
          | string_literal
          | boolean_literal
@@ -36,10 +36,10 @@ boolean_literal := true | false
 
 array_literal := <to do>
 
-op := <any of: + - * / % >
+OP := <any of: + - * / % >
 
-bool_op := <any of: < > == != and or not>
+LOGICAL_OP := <any of: < > == != and or>
 
-end_cond := :
+END_COND := :
 
-stat_sep := ;
+STATEMENT_SEP := ;
