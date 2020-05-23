@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include "lexer.h"
 
+// Version of the compiler.
+#define VERSION "0.0.1"
+
 /*
  * The main function should receive the source file (but it can be ommited
  * if a source file is piped into the program).
