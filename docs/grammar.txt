@@ -1,64 +1,53 @@
-STATEMENT := STATEMENT ;
-           | IF_STATEMENT
+# Non-terminals in ALLCAPS.
+# Terminals written as they appear in the programs.
+# The | in the rules means "or". A * in front of a non-terminal means
+# "zero or more". Square brackets are used to denote zero or one 
+# (i.e. optional).
+
+
+PROGRAM := PROGRAM_PART*
+
+PROGRAM_PART := STATEMENT
+              | FUNCTION
+
+STATEMENT := { STATEMENT* }
+           | DECLARATION 
            | ASSIGNMENT
-           | RET_STATEMENT
-           | FUNCTION_CALL
-           | WHILE_STATEMENT
-           | LOOP_STATEMENT
-           | FOR_STATEMENT
-           | MATCH_STATEMENT
-           | VAR_DECL
+           | IDENTIFIER [CALL_PARAMS] ;
+           | if EXPR : STATEMENT [else STATEMENT]
+           | return EXPR ;
+           | loop STATEMENT
+           | while EXPR : STATEMENT
+           | for DECLARATION* , EXPR , STATEMENT : STATEMENT
+           | match EXPR { MATCH_CLAUSES }
 
-RET_STATEMENT := return EXPRESSION
+FUNCTION := fn IDENTIFIER [PARAMS] : STATEMENT
 
-BLOCK := STATEMENT | { STATEMENTS }
+DECLARATION := TYPE IDENTIFIER [= EXPR] ;
 
-STATEMENTS := STATEMENT | STATEMENT ; STATEMENTS
+ASSIGNMENT := IDENTIFIER = EXPR ;
+            | IDENTIFIER INC_DEC ;
+            | IDENTIFIER ASSIGN_OP EXPR ;
 
-IF_STATEMENT := if CONDITION : BLOCK
-              | if CONDITION : BLOCK else BLOCK
+EXPR := TERM
+      | EXPR OP EXPR
+      | not EXPR
+      | ( EXPR )
 
-ASSIGNMENT := IDENTIFIER = EXPRESSION
+MATCH_CLAUSES := EXPR : STATEMENT [MATCH_CLAUSES]
 
-MATCH_STATEMENT := match EXPRESSION { MATCH_CLAUSES }
+PARAMS := TYPE IDENTIFIER [, PARAMS]
 
-MATCH_CLAUSES := MATCH_CLAUSE ; MATCH_CLAUSES
+INC_DEC := ++ | --
 
-MATCH_CLAUSE := MATCH_CLAUSE ;
-              | EXPRESSION : BLOCK
+ASSIGN_OP := += | -=
 
-LOOP_STATEMENT := loop BLOCK
-
-WHILE_STATEMENT := while CONDITION : BLOCK
-
-FOR_STATEMENT := for FOR_DECL , CONDITION , BLOCK : BLOCK
-
-FOR_DECL := VAR_DECL
-          | VAR_DECL ; FOR_DECL
-
-CONDITION := EXPRESSION LOGICAL_OP EXPRESSION
-           | not EXPRESSION
-
-EXPRESSION := LITERAL
-            | IDENTIFIER
-            | CONDITION
-            | FUNCTION_CALL
-            | EXPRESSION OP EXPRESSION
-            | ( EXPRESSION )
-
-VAR_DECL := TYPE IDENTIFIER
-          | TYPE IDENTIFIER = EXPRESSION
-
-FUNCTION_DECL := fn IDENTIFIER PARAMS : BLOCK
-
-PARAMS := PARAM , PARAMS
-
-PARAM := IDENTIFIER
-       | TYPE IDENTIFIER
+CALL_PARAMS := EXPR [, CALL_PARAMS]
 
 TYPE := int | string | float | bool
 
-FUNCTION_CALL := IDENTIFIER CALL_PARAMS
+TERM := LITERAL
+      | IDENTIFIER [( [CALL_PARAMS] )]
 
-CALL_PARAMS := EXPRESSION , CALL_PARAMS
+OP := + | - | * | / | % | and | or
 
