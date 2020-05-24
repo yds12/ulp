@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include "lexer.h"
+#include "parser.h"
 
 // Version of the compiler.
 #define VERSION "0.0.1"
@@ -26,5 +27,6 @@ int main(int argc, char ** argv) {
   }
 
   lexerStart(sourcefile, filename);
+  parserStart();
   return 0;
 }

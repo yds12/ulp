@@ -6,6 +6,9 @@
 #ifndef LEXER_H
 #define LEXER_H
 
+#include <stdlib.h>
+#include <stdio.h>
+
 // Represents a token.
 typedef struct stToken {
   char * name;
@@ -36,6 +39,7 @@ LexerState lexerState;
 // Represents the types of tokens allowed in the language.
 typedef enum enTokenType {
   TTUnknown,
+  TTEof,
   TTId,
 
   // literals
@@ -183,6 +187,34 @@ int isSingleCharOp(char character);
  *
  */
 int startsDoubleOp(char character);
+
+/*
+ * Checks whether a token type is a literal type. 
+ *
+ * type: the token type to be checked.
+ * returns: 1 if it is, 0 otherwise.
+ *
+ */
+int isLiteral(TokenType type);
+
+/*
+ * Checks whether a token type is a binary operator. 
+ *
+ * type: the token type to be checked.
+ * returns: 1 if it is, 0 otherwise.
+ *
+ */
+int isBinaryOp(TokenType type);
+
+/*
+ * Gets the precedence of an operator token type. 
+ *
+ * type: the token type to be checked.
+ * returns: The operator precedence. Maximum precedence is 0, meaning that 
+ *   such operations will be executed first. If not an operator, returns -1.
+ *
+ */
+int precedence(TokenType type);
 
 #endif
 

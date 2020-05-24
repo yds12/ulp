@@ -5,8 +5,6 @@
  *
  */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include "lexer.h"
 
@@ -78,7 +76,7 @@ void eatDoubleSymb();
 #define INITIAL_MAX_TOKENS 250
 
 // To show debug messages:
-#define DEBUG
+//#define DEBUG
 
 
 void lexerStart(FILE* sourcefile, char* sourcefilename) {
@@ -392,37 +390,6 @@ void addToken(int size, TokenType type, int lnum, int chnum) {
   }
   lexerState.tokens[lexerState.nTokens] = token;
   lexerState.nTokens++;
-}
-
-int isWhitespace(char character) {
-  if(character == ' ' || character == '\n' || character == '\t') return 1;
-  return 0;
-}
-
-int isAlpha(char character) {
-  if((character >= 'a' && character <= 'z') ||
-    (character >= 'A' && character <= 'Z')) {
-    return 1;
-  }
-  return 0;
-}
-
-int isNum(char character) {
-  if(character >= '0' && character <= '9') return 1;
-  return 0;
-}
-
-int startsDoubleOp(char character) {
-  if(character == '=' || character == '+' || character == '-' ||
-     character == '>' || character == '<') return 1;
-  return 0;
-}
-
-int isSingleCharOp(char ch) {
-  if(ch == '(' || ch == ')' || ch == '{' || ch == '}' ||
-     ch == ';' || ch == '*' || ch == '%' || ch == ':')
-    return 1;
-  return 0;
 }
 
 char lexerGetChar() {

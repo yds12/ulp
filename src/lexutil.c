@@ -1,13 +1,64 @@
 /*
  *
- * Helper file for the lexer. Mostly printing/messaging/error functions.
+ * Helper file for the lexer. Mostly printing/messaging/error functions and
+ * character/token type functions.
  *
  */
 
-#include <stdlib.h>
-#include <stdio.h>
 #include "lexer.h"
 
+
+int isWhitespace(char character) {
+  if(character == ' ' || character == '\n' || character == '\t') return 1;
+  return 0;
+}
+
+int isAlpha(char character) {
+  if((character >= 'a' && character <= 'z') ||
+    (character >= 'A' && character <= 'Z')) {
+    return 1;
+  }
+  return 0;
+}
+
+int isNum(char character) {
+  if(character >= '0' && character <= '9') return 1;
+  return 0;
+}
+
+int startsDoubleOp(char character) {
+  if(character == '=' || character == '+' || character == '-' ||
+     character == '>' || character == '<') return 1;
+  return 0;
+}
+
+int isSingleCharOp(char ch) {
+  if(ch == '(' || ch == ')' || ch == '{' || ch == '}' ||
+     ch == ';' || ch == '*' || ch == '%' || ch == ':')
+    return 1;
+  return 0;
+}
+
+int isLiteral(TokenType type) {
+  if(type == TTLitInt || type == TTLitFloat || type == TTLitString ||
+     type == TTLitBool || type == TTLitArray)
+    return 1;
+  return 0;
+}
+
+int isBinaryOp(TokenType type) {
+  if(type == TTEq || type == TTPlus || type == TTMinus ||
+     type == TTMult || type == TTDiv || type == TTGreater ||
+     type == TTLess || type == TTGEq || type == TTLEq ||
+     type == TTAnd || type == TTOr)
+    return 1;
+  return 0;
+}
+
+int precedence(TokenType type) {
+  if(type == TTMult || type == TTDiv) return 0;
+  return -1;
+}
 
 void printCharInFile(FILE* file, int lnum, int chnum) {
   rewind(file);
