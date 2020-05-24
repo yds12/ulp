@@ -65,8 +65,8 @@ void eatDQuote();
 void eatSingleSymb();
 
 /*
- * Processes tokens constituted of two repeated characters,
- * such as ==, ++, --.
+ * Processes operator tokens constituted of two characters,
+ * such as ==, +=, -=, ++, --.
  *
  */
 void eatDoubleSymb();
@@ -121,7 +121,7 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
     if(ch == '/') eatSlash();
     else if(ch == '"') eatDQuote();
     else if(isSingleCharOp(ch)) eatSingleSymb();
-    else if(belongsToDoubleOp(ch)) eatDoubleSymb();
+    else if(startsDoubleOp(ch)) eatDoubleSymb();
     else if(isAlpha(ch) || ch == '_') eatIDKW();
     else if(isNum(ch)) eatNumber();
     else if(isWhitespace(ch)) charBuffer[0] = lexerGetChar();
@@ -137,11 +137,11 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
 // Prints info about the tokens processed
 #ifdef DEBUG
   for(int i = 0; i < n_tokens; i++) {
-    printf("\n\n");
+    //printf("\n\n");
     printf("tt_%d @%d,%d, len: %d, ||%s||\n", tokens[i].type, 
       tokens[i].lnum, tokens[i].chnum, tokens[i].nameSize, tokens[i].name);
 
-    printTokenInFile(sourcefile, tokens[i]);
+    //printTokenInFile(sourcefile, tokens[i]);
   }
   printf("Total tokens: %d\n", n_tokens);
 #endif
@@ -245,33 +245,60 @@ void eatDoubleSymb()
 
   char ch = lexerGetChar();
   TokenType type = TTUnknown;
+  int numChars = 2;
 
-  if(ch == buffer[0]) { // double symbol
-    switch(buffer[0]) {
-      case '=': type = TTEq;
-        break;
-      case '+': type = TTIncr;
-        break;
-      case '-': type = TTDecr;
-        break;
+  if(buffer[0] == '+') {
+    if(ch == '+') {
+      type = TTIncr;
+    } else if(ch == '=') {
+      type = TTAdd;
+    } else { // just a plus
+      type = TTPlus;
+      numChars = 1;
     }
+  } else if(buffer[0] == '-') {
+    if(ch == '-') {
+      type = TTDecr;
+    } else if(ch == '=') {
+      type = TTSub;
+    } else { // just a minus
+      type = TTMinus;
+      numChars = 1;
+    }
+  } else if(buffer[0] == '=') {
+    if(ch == '=') {
+      type = TTEq;
+    } else if(ch == '>') {
+      type = TTArrow;
+    } else { // just an assignment
+      type = TTAssign;
+      numChars = 1;
+    }
+  } else if(buffer[0] == '>') {
+    if(ch == '=') {
+      type = TTGEq;
+    } else { // just a greater than
+      type = TTGreater;
+      numChars = 1;
+    }
+  } else if(buffer[0] == '<') {
+    if(ch == '=') {
+      type = TTLEq;
+    } else { // just a less than
+      type = TTLess;
+      numChars = 1;
+    }
+  }
 
+  if(numChars == 2) {
     buffer[bufpos] = ch;
-    addToken(2, type, lnum, chnum);
+    addToken(numChars, type, lnum, chnum);
     buffer[0] = lexerGetChar();
-  } else { // single symbol
-    switch(buffer[0]) {
-      case '=': type = TTAssign;
-        break;
-      case '+': type = TTPlus;
-        break;
-      case '-': type = TTMinus;
-        break;
-    }
-
-    addToken(1, type, lnum, chnum);
+  } else {
+    addToken(numChars, type, lnum, chnum);
     buffer[0] = ch;
   }
+
   return;
 }
 
@@ -384,8 +411,9 @@ int isNum(char character) {
   return 0;
 }
 
-int belongsToDoubleOp(char character) {
-  if(character == '=' || character == '+' || character == '-') return 1;
+int startsDoubleOp(char character) {
+  if(character == '=' || character == '+' || character == '-' ||
+     character == '>' || character == '<') return 1;
   return 0;
 }
 

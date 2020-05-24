@@ -20,8 +20,10 @@ STATEMENT := { STATEMENT* }
            | while EXPR : STATEMENT
            | for DECLARATION* , EXPR , STATEMENT : STATEMENT
            | match EXPR { MATCH_CLAUSES }
+           | break ;
+           | next ;
 
-FUNCTION := fn IDENTIFIER [PARAMS] : STATEMENT
+FUNCTION := fn IDENTIFIER [PARAMS] => STATEMENT
 
 DECLARATION := TYPE IDENTIFIER [= EXPR] ;
 

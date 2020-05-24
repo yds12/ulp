@@ -62,6 +62,7 @@ typedef enum enTokenType {
   TTRBrace,
   TTSemi,
   TTColon,
+  TTArrow,
 
   // operators
   TTDiv,
@@ -69,10 +70,16 @@ typedef enum enTokenType {
   TTMinus,
   TTMod,
   TTMult,
-  TTAssign,
+  TTGreater,
+  TTGEq,
+  TTLess,
+  TTLEq,
   TTEq,
+  TTAssign,
   TTIncr,
   TTDecr,
+  TTAdd,
+  TTSub,
 
   // keywords
   TTIf,
@@ -178,14 +185,14 @@ int isNum(char character);
 int isSingleCharOp(char character);
 
 /*
- * Checks whether a character could be part of a "double" operator, such
- * as ==, ++ or --. 
+ * Checks whether a character could be the first in a 2-char operator, such
+ * as ==, +=, ++, -= or --. 
  *
  * character: the character to be checked.
  * returns: 1 if it is, 0 otherwise.
  *
  */
-int belongsToDoubleOp(char character);
+int startsDoubleOp(char character);
 
 #endif
 
