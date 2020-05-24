@@ -7,7 +7,7 @@
 #include "parser.h"
 
 // Version of the compiler.
-#define VERSION "0.0.1"
+#define VERSION "0.0.2"
 
 /*
  * The main function should receive the source file (but it can be ommited

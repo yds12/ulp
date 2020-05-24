@@ -12,9 +12,10 @@ code, and then linked with `ld`.
 
 ## The Language
 
-For now, a *very* incomplete specification of the language is in the `docs`
+An incomplete specification of the language is in the `docs`
 directory. For the lexer we have [`docs/lexicon.txt`](docs/lexicon.txt), and
-for the parser we have [`docs/grammar.txt`](docs/grammar.txt).
+for the parser we have [`docs/grammar.txt`](docs/grammar.txt). For now,
+the language will just be called **ulp**, for "uma linguagem de programação".
 
 ## Roadmap
 
