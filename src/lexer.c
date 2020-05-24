@@ -88,24 +88,24 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
   printFile(sourcefile);
 #endif
 
-  filename = sourcefilename;
-
-  // The list of tokens in the source file
-  tokens = (Token*) malloc(INITIAL_MAX_TOKENS * sizeof(Token));
-
   // Buffer to read the chars, is reset at the end of each token
   char charBuffer[BUFFER_SIZE];
-  n_tokens = 0; // number of tokens processed so far
 
   // Holds global state variables of the lexer
   lexerState = (LexerState) {
     .maxTokens = INITIAL_MAX_TOKENS,
     .buffer = charBuffer,
     .file = sourcefile,
+    .filename = sourcefilename,
     .lastChar = '\0',
     .lnum = 1,
-    .chnum = 1
+    .chnum = 1,
+    .nTokens = 0, // number of tokens processed so far
+    .tokens = NULL
   };
+
+  // The list of tokens in the source file
+  lexerState.tokens = (Token*) malloc(INITIAL_MAX_TOKENS * sizeof(Token));
 
   // starts with the first character
   if(!feof(sourcefile)) {
@@ -136,14 +136,15 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
 
 // Prints info about the tokens processed
 #ifdef DEBUG
-  for(int i = 0; i < n_tokens; i++) {
+  for(int i = 0; i < lexerState.nTokens; i++) {
     //printf("\n\n");
-    printf("tt_%d @%d,%d, len: %d, ||%s||\n", tokens[i].type, 
-      tokens[i].lnum, tokens[i].chnum, tokens[i].nameSize, tokens[i].name);
+    printf("tt_%d @%d,%d, len: %d, ||%s||\n", lexerState.tokens[i].type, 
+      lexerState.tokens[i].lnum, lexerState.tokens[i].chnum, 
+      lexerState.tokens[i].nameSize, lexerState.tokens[i].name);
 
     //printTokenInFile(sourcefile, tokens[i]);
   }
-  printf("Total tokens: %d\n", n_tokens);
+  printf("Total tokens: %d\n", lexerState.nTokens);
 #endif
 
   fclose(sourcefile);
@@ -382,15 +383,15 @@ void addToken(int size, TokenType type, int lnum, int chnum) {
   strncpy(tokenName, lexerState.buffer, size);
   token.name[size] = '\0';
 
-  if(n_tokens >= lexerState.maxTokens) {
+  if(lexerState.nTokens >= lexerState.maxTokens) {
     // doubles the size of the array of tokens
-    tokens = (Token*) realloc(
-      tokens, sizeof(Token) * lexerState.maxTokens * 2);
+    lexerState.tokens = (Token*) realloc(
+      lexerState.tokens, sizeof(Token) * lexerState.maxTokens * 2);
 
     lexerState.maxTokens *= 2;
   }
-  tokens[n_tokens] = token;
-  n_tokens++;
+  lexerState.tokens[lexerState.nTokens] = token;
+  lexerState.nTokens++;
 }
 
 int isWhitespace(char character) {

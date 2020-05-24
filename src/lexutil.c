@@ -43,7 +43,7 @@ void printCharInFile(FILE* file, int lnum, int chnum) {
     else buff_mark[i] = '^';
   }
 
-  printf("%s:%d:%d:\n\n", filename, lnum, chnum);
+  printf("%s:%d:%d:\n\n", lexerState.filename, lnum, chnum);
   printf("%s", buff);
   printf("%s\n", buff_mark);
 }
@@ -83,7 +83,7 @@ void printTokenInFile(FILE* file, Token token) {
   }
 
   printf("\nToken '%s':\n", token.name);
-  printf("%s:%d:%d:\n\n", filename, token.lnum, token.chnum);
+  printf("%s:%d:%d:\n\n", lexerState.filename, token.lnum, token.chnum);
   printf("%s", buff);
   printf("%s\n", buff_mark);
 }
@@ -101,7 +101,7 @@ void printFile(FILE* file) {
 }
 
 void error(char* msg) {
-  printf("ERROR: %s\n%s: line: %d, column: %d.\n", msg, filename, 
+  printf("ERROR: %s\n%s: line: %d, column: %d.\n", msg, lexerState.filename, 
     lexerState.lnum, lexerState.chnum);
   printCharInFile(lexerState.file, lexerState.lnum, lexerState.chnum);
   exit(1);

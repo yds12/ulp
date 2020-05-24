@@ -20,28 +20,18 @@ typedef struct stLexerState {
   int maxTokens; // current size of the array of tokens
   char* buffer;
   FILE* file;
+  char* filename;
   char lastChar;
   int lnum;      // this should always point to the line of the last char read
   int chnum;     // this should always point to the position of the last char
   int prevLnum;
   int prevChnum;
+  int nTokens;  // number of tokens processed
+  Token* tokens; // list of processed tokens
 } LexerState;
-
-/*
- * Global lexer variables.
- */
-
-// file being manipulated.
-char* filename;
 
 // Global state of the lexer.
 LexerState lexerState;
-
-// List of tokens processed.
-Token* tokens;
-
-// Number of tokens processed.
-int n_tokens;
 
 // Represents the types of tokens allowed in the language.
 typedef enum enTokenType {
