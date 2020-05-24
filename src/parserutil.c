@@ -1,7 +1,17 @@
+/*
+ *
+ * Helper functions for the parser. Mostly data structures.
+ *
+ * The parser will use a stack of pointers to subtrees. The nodes of these
+ * subtress will be in a list.
+ *
+ */
+
 #include <stdlib.h>
 #include "parser.h"
 
 #define INITIAL_STACK_SIZE 100
+#define INITIAL_MAX_NODES 250
 
 void initializeStack() {
   pStack = (ParserStack) {
@@ -10,21 +20,44 @@ void initializeStack() {
     .maxSize = INITIAL_STACK_SIZE
   };
 
-  pStack.nodes = (Node*) malloc(INITIAL_STACK_SIZE * sizeof(Node));
+  nodeCount = 0;
+  maxNodes = INITIAL_MAX_NODES;
+  pNodes = (Node*) malloc(sizeof(Node) * maxNodes);
+  pStack.nodes = (Node**) malloc(INITIAL_STACK_SIZE * sizeof(Node*));
 }
 
-void stackPush(Node node) {
+Node* createAndPush(Node node, int nChildren) {
+  Node* nodePtr = newNode(node);
+  if(nChildren > 0) allocChildren(nodePtr, nChildren);
+  stackPush(nodePtr);
+  return nodePtr;
+}
+
+Node* newNode(Node node) {
+  if(nodeCount >= maxNodes) {
+    pNodes = (Node*) realloc(pNodes, sizeof(Node) * maxNodes * 2);
+    maxNodes *= 2;
+  }
+
+  pNodes[nodeCount] = node;
+  nodeCount++;
+  return &pNodes[nodeCount - 1];
+}
+
+void stackPush(Node* node) {
   if(pStack.pointer >= pStack.maxSize - 1) { // reallocate space for stack
-    pStack.nodes = (Node*) realloc(
-      pStack.nodes, sizeof(Node) * pStack.maxSize * 2);
+    pStack.nodes = (Node**) realloc(
+      pStack.nodes, sizeof(Node*) * pStack.maxSize * 2);
+
+    pStack.maxSize *= 2;
   }
 
   pStack.pointer++;
   pStack.nodes[pStack.pointer] = node;
 }
 
-Node stackPop(int n) {
-  Node node = pStack.nodes[pStack.pointer - (n - 1)];
+Node* stackPop(int n) {
+  Node* node = pStack.nodes[pStack.pointer - (n - 1)];
   pStack.pointer -= n;
   return node;
 }
@@ -39,5 +72,6 @@ Token lookAhead() {
 }
 
 void allocChildren(Node* node, int nChildren) {
-  node->children = (Node*) malloc(sizeof(Node) * nChildren);
+  node->children = (Node**) malloc(sizeof(Node*) * nChildren);
 }
+

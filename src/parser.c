@@ -8,41 +8,49 @@ void shift();
 int reduce();
 void printStack();
 
+// Replaces the current stack top with a parent node of specified type
+void singleParent(NodeType type);
+
 void parserStart() {
   nextToken = 0;
   initializeStack();
 
   while(nextToken < lexerState.nTokens) {
     shift();
+
+#ifdef DEBUG
+    printf("After shift. ");
+    printStack();
+#endif
+
     int success = 0;
 
     do {
       success = reduce(); 
-    } while(success);
 
 #ifdef DEBUG
+    printf("After reduce. ");
     printStack();
 #endif
+
+    } while(success);
   }
+
+  printf("Total tokens: %d\n", lexerState.nTokens);
 }
 
 void shift() {
-
-#ifdef DEBUG
-      printf("shift\n");
-#endif
-
   Token* token = &lexerState.tokens[nextToken];
   nextToken++;
 
   Node node = { NTTerminal, token, NULL};
-  stackPush(node);
+  createAndPush(node, 0);
 }
 
 int reduce() {
-  Node* curNode = &pStack.nodes[pStack.pointer];
+  Node* curNode = pStack.nodes[pStack.pointer];
   Node* prevNode = NULL;
-  if(pStack.pointer >= 1) prevNode = &pStack.nodes[pStack.pointer - 1];
+  if(pStack.pointer >= 1) prevNode = pStack.nodes[pStack.pointer - 1];
 
 #ifdef DEBUG
       printf("Reduce. curNode->type: %d\n", curNode->type);
@@ -60,11 +68,7 @@ int reduce() {
     if(!prevNode || prevNode->type == NTProgramPart) {
       // we are reading a semicolon and the previous statement is already
       // reduced.
-      Node node = { NTNoop, NULL, NULL };
-      allocChildren(&node, 1);
-      node.children[0] = *curNode;
-      stackPop(1);
-      stackPush(node);
+      singleParent(NTNoop);
 
 #ifdef DEBUG
       printf("NTNoop\n");
@@ -72,12 +76,17 @@ int reduce() {
 
       return 1;
     }
+  } else if(curNode->type == NTTerminal && isLiteral(curNode->token->type)) {
+    // we have a literal, becomes term
+    singleParent(NTTerm);
+
+#ifdef DEBUG
+    printf("NTTerm\n");
+#endif
+
+    return 1;
   } else if(curNode->type == NTNoop) {
-    Node node = { NTStatement, NULL, NULL };
-    allocChildren(&node, 1);
-    node.children[0] = *curNode;
-    stackPop(1);
-    stackPush(node);
+    singleParent(NTStatement);
 
 #ifdef DEBUG
     printf("NTStatement\n");
@@ -88,11 +97,7 @@ int reduce() {
     if(!prevNode || prevNode->type == NTProgramPart) {
       // we have a finished statement and the previous statement is already
       // reduced.
-      Node node = { NTProgramPart, NULL, NULL };
-      allocChildren(&node, 1);
-      node.children[0] = *curNode;
-      stackPop(1);
-      stackPush(node);
+      singleParent(NTProgramPart);
 
 #ifdef DEBUG
       printf("NTProgramPart\n");
@@ -137,11 +142,20 @@ int reduce() {
   }*/
 }
 
+void singleParent(NodeType type) {
+  Node* curNode = pStack.nodes[pStack.pointer];
+  stackPop(1);
+
+  Node node = { type, NULL, NULL };
+  Node* nodePtr = createAndPush(node, 1);
+  nodePtr->children[0] = curNode;
+}
+
 void printStack() {
   printf("Nodes on stack: ");
   for(int i = 0; i < pStack.pointer; i++) {
-    Node node = pStack.nodes[pStack.pointer];
-    printf(" %d", node.type);
+    Node* node = pStack.nodes[i];
+    printf(" %d", node->type);
   }
   printf(".\n");
 }
