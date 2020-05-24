@@ -13,6 +13,12 @@ typedef enum stNodeType {
   NTProgramPart,
   NTStatement,
   NTFunction,
+  NTBreakSt,
+  NTNextSt,
+  NTIfSt,
+  NTLoopSt,
+  NTWhileSt,
+  NTMatchSt,
   NTNoop,
   NTExpression,
   NTTerm,
@@ -62,6 +68,8 @@ Node* stackPop(int n);
 void allocChildren(Node* node, int nChildren);
 
 Token lookAhead();
+
+int isSubStatement(NodeType type);
 
 #endif
 

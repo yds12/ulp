@@ -76,7 +76,7 @@ void eatDoubleSymb();
 #define INITIAL_MAX_TOKENS 250
 
 // To show debug messages:
-//#define DEBUG
+#define DEBUG
 
 
 void lexerStart(FILE* sourcefile, char* sourcefilename) {
@@ -131,21 +131,6 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
       error(str);
     }
   }
-
-// Prints info about the tokens processed
-#ifdef DEBUG
-  for(int i = 0; i < lexerState.nTokens; i++) {
-    //printf("\n\n");
-    printf("tt_%d @%d,%d, len: %d, ||%s||\n", lexerState.tokens[i].type, 
-      lexerState.tokens[i].lnum, lexerState.tokens[i].chnum, 
-      lexerState.tokens[i].nameSize, lexerState.tokens[i].name);
-
-    //printTokenInFile(sourcefile, tokens[i]);
-  }
-  printf("Total tokens: %d\n", lexerState.nTokens);
-#endif
-
-  fclose(sourcefile);
 }
 
 void eatIDKW()
@@ -324,6 +309,8 @@ void eatSingleSymb()
     case '%': type = TTMod;
       break;
     case ':': type = TTColon;
+      break;
+    case ',': type = TTComma;
       break;
   }
 

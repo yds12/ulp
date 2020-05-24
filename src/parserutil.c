@@ -8,6 +8,7 @@
  */
 
 #include <stdlib.h>
+#include <string.h>
 #include "parser.h"
 
 #define INITIAL_STACK_SIZE 100
@@ -73,5 +74,13 @@ Token lookAhead() {
 
 void allocChildren(Node* node, int nChildren) {
   node->children = (Node**) malloc(sizeof(Node*) * nChildren);
+}
+
+int isSubStatement(NodeType type) {
+  if(type == NTBreakSt || type == NTNextSt || type == NTIfSt ||
+     type == NTLoopSt || type == NTWhileSt || type == NTNoop ||
+     type == NTMatchSt)
+    return 1;
+  return 0;
 }
 

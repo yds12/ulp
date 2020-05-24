@@ -56,6 +56,7 @@ typedef enum enTokenType {
   TTRBrace,
   TTSemi,
   TTColon,
+  TTComma,
   TTArrow,
 
   // operators
@@ -96,8 +97,7 @@ typedef enum enTokenType {
  * Starts the lexer.
  *
  * sourcefile: pointer to the source file to process (file should be already
- *   open for reading/text mode). The file will be closed at the end by this
- *   function.
+ *   open for reading/text mode). The file will be left open.
  * sourcefilename: name of the source file, used for messages.
  *
  */

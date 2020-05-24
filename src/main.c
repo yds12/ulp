@@ -28,5 +28,6 @@ int main(int argc, char ** argv) {
 
   lexerStart(sourcefile, filename);
   parserStart();
+  fclose(sourcefile);
   return 0;
 }
