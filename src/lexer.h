@@ -3,6 +3,9 @@
  * and global variables.
  */
 
+#ifndef LEXER_H
+#define LEXER_H
+
 // Represents a token.
 typedef struct stToken {
   char * name;
@@ -119,6 +122,17 @@ void printFile(FILE* file);
 void printTokenInFile(FILE* file, Token token);
 
 /*
+ * Prints the line where a character is located and highlights the character. 
+ *
+ * file: pointer to the source file (should be open, will be rewinded and
+ *   will not be closed).
+ * lnum: line number where the character appears.
+ * chnum: column/position in the line where the character appears.
+ *
+ */
+void printCharInFile(FILE* file, int lnum, int chnum);
+
+/*
  * Prints an error message and exits the program with exit code 1. 
  *
  * msg: message to be printed. 
@@ -172,4 +186,6 @@ int isSingleCharOp(char character);
  *
  */
 int belongsToDoubleOp(char character);
+
+#endif
 

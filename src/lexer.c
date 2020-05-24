@@ -125,6 +125,13 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
     else if(isAlpha(ch) || ch == '_') eatIDKW();
     else if(isNum(ch)) eatNumber();
     else if(isWhitespace(ch)) charBuffer[0] = lexerGetChar();
+    else { // unexpected character
+      char* format = "Unexpected character: '%c'.";
+      int len = strlen(format) - 1;
+      char str[len];
+      sprintf(str, format, ch); 
+      error(str);
+    }
   }
 
 // Prints info about the tokens processed
@@ -405,63 +412,5 @@ char lexerGetChar() {
     return ch;
   }
   else return EOF;
-}
-
-void printTokenInFile(FILE* file, Token token) {
-  rewind(file);
-
-  int BUFF_SIZE = 80;
-  char buff[BUFF_SIZE + 1];
-  char buff_mark[BUFF_SIZE + 1];
-
-  for(int i = 0; i <= BUFF_SIZE; i++) {
-    buff[i] = '\0';
-    buff_mark[i] = '\0';
-  }
-
-  int lnum = 1;
-  int chnum = 1;
-  while(!feof(file)) {
-    char ch = fgetc(file);
-
-    if(lnum == token.lnum) {
-      if(chnum < BUFF_SIZE) buff[chnum - 1] = ch;
-    } else if(lnum > token.lnum) break;
-
-    if(ch == '\n') {
-      lnum++;
-      chnum = 1;
-    } else chnum++;
-  }
-
-  for(int i = 0; i < BUFF_SIZE; i++) {
-    if(i + 1 < token.chnum || i + 1 >= token.chnum + token.nameSize) {
-      buff_mark[i] = ' '; 
-    }
-    else buff_mark[i] = '^';
-  }
-
-  printf("\nToken '%s':\n", token.name);
-  printf("%s:%d:%d:\n\n", filename, token.lnum, token.chnum);
-  printf("%s", buff);
-  printf("%s\n", buff_mark);
-}
-
-void printFile(FILE* file) {
-  rewind(file);
-  char ch = fgetc(file);
-
-  while(!feof(file)) {
-    printf("%c", ch);
-    ch = fgetc(file);
-  }
-  printf("\n");
-  rewind(file);
-}
-
-void error(char* msg) {
-  printf("ERROR: %s\n%s: line: %d, column: %d.\n", msg, filename, 
-    lexerState.lnum, lexerState.chnum);
-  exit(1);
 }
 

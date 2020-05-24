@@ -4,7 +4,6 @@ SDir=src
 Exec=bin/compiler
 CC=gcc
 Sources=src/*.c
-Objs=$(ODir)tokenizer.o
 Opt=-g
 
 build:
