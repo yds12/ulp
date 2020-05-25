@@ -46,6 +46,13 @@ int isLiteral(TokenType type) {
   return 0;
 }
 
+int isType(TokenType type) {
+  if(type == TTInt || type == TTBool || type == TTString ||
+     type == TTFloat)
+    return 1;
+  return 0;
+}
+
 int isBinaryOp(TokenType type) {
   if(type == TTEq || type == TTPlus || type == TTMinus ||
      type == TTMult || type == TTDiv || type == TTGreater ||

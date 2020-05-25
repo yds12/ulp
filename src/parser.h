@@ -8,6 +8,9 @@
 
 #include "lexer.h"
 
+// Maximum length of a node type name
+#define MAX_NODE_NAME 40
+
 typedef enum stNodeType {
   NTProgram,
   NTProgramPart,
@@ -19,11 +22,15 @@ typedef enum stNodeType {
   NTLoopSt,
   NTWhileSt,
   NTMatchSt,
+  NTCallSt,
+  NTParam,
   NTNoop,
   NTExpression,
   NTTerm,
+  NTType,
   NTLiteral,
   NTBinaryOp,
+  NTIdentifier,
   NTTerminal,
 } NodeType;
 
@@ -78,6 +85,8 @@ void allocChildren(Node* node, int nChildren);
 Token lookAhead();
 
 int isSubStatement(NodeType type);
+
+void strReplaceNodeName(char* str, char* format, Node* node);
 
 void parsError(char* msg, int lnum, int chnum);
 

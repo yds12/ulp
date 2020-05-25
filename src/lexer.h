@@ -198,6 +198,15 @@ int startsDoubleOp(char character);
 int isLiteral(TokenType type);
 
 /*
+ * Checks whether a token type is a (data) type type. 
+ *
+ * type: the token type to be checked.
+ * returns: 1 if it is, 0 otherwise.
+ *
+ */
+int isType(TokenType type);
+
+/*
  * Checks whether a token type is a binary operator. 
  *
  * type: the token type to be checked.

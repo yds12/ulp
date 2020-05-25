@@ -80,7 +80,7 @@ void allocChildren(Node* node, int nChildren) {
 int isSubStatement(NodeType type) {
   if(type == NTBreakSt || type == NTNextSt || type == NTIfSt ||
      type == NTLoopSt || type == NTWhileSt || type == NTNoop ||
-     type == NTMatchSt)
+     type == NTMatchSt || type == NTCallSt)
     return 1;
   return 0;
 }
@@ -94,5 +94,49 @@ void parsError(char* msg, int lnum, int chnum) {
     printf("\nERROR: %s\n%s.\n", msg, parserState.filename);
   }
   exit(1);
+}
+
+void strReplaceNodeName(char* str, char* format, Node* node) {
+  NodeType type = node->type;
+
+  if(type == NTTerminal) {
+    char strToken[node->token->nameSize + 10];
+    char* strTokenFormat = "token '%s'";
+    sprintf(strToken, strTokenFormat, node->token->name);
+    sprintf(str, format, strToken);
+  } 
+  else switch(type) {
+    case NTBreakSt: sprintf(str, format, "'break' statement");
+      break;
+    case NTNextSt: sprintf(str, format, "'next' statement");
+      break;
+    case NTIfSt: sprintf(str, format, "'if' statement");
+      break;
+    case NTLoopSt: sprintf(str, format, "'loop' statement");
+      break;
+    case NTWhileSt: sprintf(str, format, "'while' statement");
+      break;
+    case NTNoop: sprintf(str, format, "empty statement");
+      break;
+    case NTMatchSt: sprintf(str, format, "'match' statement");
+      break;
+    case NTProgramPart: sprintf(str, format, 
+                                "function declaration or statement");
+      break;
+    case NTStatement: sprintf(str, format, "statement");
+      break;
+    case NTFunction: sprintf(str, format, "function declaration");
+      break;
+    case NTExpression: sprintf(str, format, "expression");
+      break;
+    case NTTerm: sprintf(str, format, "term");
+      break;
+    case NTLiteral: sprintf(str, format, "literal");
+      break;
+    case NTBinaryOp: sprintf(str, format, "binary operator");
+      break;
+    case NTProgram: sprintf(str, format, "complete program");
+      break;
+  }
 }
 
