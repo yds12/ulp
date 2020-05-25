@@ -225,5 +225,14 @@ int isBinaryOp(TokenType type);
  */
 int precedence(TokenType type);
 
+/*
+ * Checks whether the token type signals the end of an expression. 
+ *
+ * type: the token type to be checked.
+ * returns: 1 if it does, 0 otherwise.
+ *
+ */
+int isExprTerminator(TokenType type);
+
 #endif
 

@@ -64,7 +64,19 @@ int isBinaryOp(TokenType type) {
 
 int precedence(TokenType type) {
   if(type == TTMult || type == TTDiv) return 0;
+  if(type == TTPlus || type == TTMinus) return 1;
+  if(type == TTMod) return 2;
+  if(type == TTNot) return 3;
+  if(type == TTAnd || type == TTOr) return 4;
+  if(type == TTGreater || type == TTGEq || type == TTEq || 
+     type == TTLess || type == TTLEq) return 5;
   return -1;
+}
+
+int isExprTerminator(TokenType type) {
+  if(type == TTColon || type == TTComma 
+     || type == TTSemi || type == TTRPar) return 1;
+  return 0; 
 }
 
 void printCharInFile(FILE* file, int lnum, int chnum) {

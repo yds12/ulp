@@ -36,7 +36,6 @@ void parserStart() {
       success = reduce(); 
 
 #ifdef DEBUG
-    printf("After reduce. ");
     printStack();
 #endif
 
@@ -57,7 +56,6 @@ void shift() {
   createAndPush(node, 0);
 
 #ifdef DEBUG
-    printf("After shift.  ");
     printStack();
 #endif
 
@@ -151,8 +149,7 @@ int reduceIdentifier() {
   if(ttype == TTId || ttype == TTLPar || ttype == TTNot || isLiteral(ttype)) {
     // is function ID (will be reduced later)
   } else { // is variable
-    if(prevNode && prevNode->type == NTTerminal 
-       && isType(prevNode->token->type)) // in declaration
+    if(prevNode && prevNode->type == NTType) // in declaration
     {
       Node* prevPrevNode = NULL;
       if(pStack.pointer >= 2) prevPrevNode = pStack.nodes[pStack.pointer - 2];
@@ -186,16 +183,32 @@ int reduceExpression() {
   int reduced = 0;
   Node* curNode = pStack.nodes[pStack.pointer];
   Node* prevNode = NULL;
+  Node* prevPrevNode = NULL;
   if(pStack.pointer >= 1) prevNode = pStack.nodes[pStack.pointer - 1];
+  if(pStack.pointer >= 2) prevPrevNode = pStack.nodes[pStack.pointer - 2];
 
-  if(prevNode && prevNode->type == NTBinaryOp) {
-    Node* prevPrevNode = NULL;
-    if(pStack.pointer >= 2) prevPrevNode = pStack.nodes[pStack.pointer - 2];
+  Token laToken = lookAhead();
+  TokenType laType = laToken.type;
 
-    TokenType nextTType = lookAhead().type;
+  if(!prevNode) { // error: starting program with expression
+    Node* problematic = astLastLeaf(curNode);
+    parsError("Unexpected expression at the beginning of the program.", 
+      problematic->token->lnum, problematic->token->chnum);
+  }
+  else if(prevNode->type == NTProgramPart || prevNode->type == NTStatement) {
+    // Error: expression after complete statement
+    char* format = "Unexpected expression after %s.";
+    int len = strlen(format) + MAX_NODE_NAME;
+    char str[len];
+    strReplaceNodeName(str, format, prevNode); 
 
-    if(nextTType == TTRPar) {
-      if(prevPrevNode->type != NTExpression) {
+    Node* problematic = astLastLeaf(prevNode);
+    parsError(str, problematic->token->lnum, problematic->token->chnum);
+  }
+
+  if(isExprTerminator(laType)) {
+    if(prevNode->type == NTBinaryOp) {
+      if(prevPrevNode && prevPrevNode->type != NTExpression) {
         // If we see a OP EXPR sequence, there must be an EXPR before that 
         char* format = "Expected expression before operator, found %s.";
         int len = strlen(format) + MAX_NODE_NAME;
@@ -204,7 +217,13 @@ int reduceExpression() {
 
         Node* problematic = astLastLeaf(prevPrevNode);
         parsError(str, problematic->token->lnum, problematic->token->chnum);
-      } else { // EXPR OP EXPR ) sequence, EXPR OP EXPR => EXPR
+      } else { // EXPR OP EXPR TERMINATOR sequence, EXPR OP EXPR => EXPR
+
+#ifdef DEBUG
+printf("REDUCED EXPR: %s EXPR %s\n", prevNode->children[0]->token->name,
+laToken.name);
+#endif
+
         stackPop(3);
         Node node = { 
           .type = NTExpression, 
@@ -218,6 +237,48 @@ int reduceExpression() {
         reduced = 1;
       }
     }
+  } else if(isBinaryOp(laType)) {
+    if(prevNode->type == NTBinaryOp) {
+      if(prevPrevNode && prevPrevNode->type != NTExpression) {
+        // If we see a OP EXPR sequence, there must be an EXPR before that 
+        char* format = "Expected expression before operator, found %s.";
+        int len = strlen(format) + MAX_NODE_NAME;
+        char str[len];
+        strReplaceNodeName(str, format, prevPrevNode); 
+
+        Node* problematic = astLastLeaf(prevPrevNode);
+        parsError(str, problematic->token->lnum, problematic->token->chnum);
+      } else if(precedence(laType) >= 
+                precedence(prevNode->children[0]->token->type)){ 
+
+#ifdef DEBUG
+printf("REDUCED EXPR: %s EXPR %s\n", prevNode->children[0]->token->name,
+laToken.name);
+printf("PRECEDENCES: %d %d\n", precedence(prevNode->children[0]->token->type),
+precedence(laType));
+#endif
+
+        // EXPR OP EXPR OP sequence, reduce if the previous has precedence
+        // (<= value for precedence()), otherwise do nothing
+        stackPop(3);
+        Node node = { 
+          .type = NTExpression, 
+          .token = NULL, 
+          .children = NULL // set in createAndPush()
+        };
+        Node* nodePtr = createAndPush(node, 3);
+        nodePtr->children[0] = prevPrevNode;
+        nodePtr->children[1] = prevNode;
+        nodePtr->children[2] = curNode;
+        reduced = 1;
+      }
+    }
+  } else {
+    // error: unexpected token after expression
+    char* format = "Unexpected token '%s' after expression.";
+    char str[strlen(format) + laToken.nameSize + 5];
+    sprintf(str, format, laToken.name);
+    parsError(str, laToken.lnum, laToken.chnum);
   }
 
   return reduced;
