@@ -19,10 +19,15 @@ void singleParent(NodeType type);
 int canPrecedeStatement(Node* node);
 
 void parserStart() {
-  nextToken = 0;
+  parserState = (ParserState) { 
+    .file = lexerState.file, 
+    .filename = lexerState.filename,
+    .nextToken = 0
+  };
+
   initializeStack();
 
-  while(nextToken < lexerState.nTokens) {
+  while(parserState.nextToken < lexerState.nTokens) {
     shift();
     int success = 0;
 
@@ -39,10 +44,15 @@ void parserStart() {
 }
 
 void shift() {
-  Token* token = &lexerState.tokens[nextToken];
-  nextToken++;
+  Token* token = &lexerState.tokens[parserState.nextToken];
+  parserState.nextToken++;
 
-  Node node = { NTTerminal, token, NULL};
+  Node node = { 
+    .type = NTTerminal, 
+    .token = token, 
+    .children = NULL,
+    .nChildren = 0
+  };
   createAndPush(node, 0);
 
 #ifdef DEBUG
@@ -76,11 +86,14 @@ int reduce() {
       singleParent(NTProgramPart);
       reduced = 1;
     } else if(!canPrecedeStatement(prevNode)) {
+      // build error string
       char* format = "Unexpected NT %d before statement.";
       int len = strlen(format) + 6;
       char str[len];
       sprintf(str, format, prevNode->type); 
-      error(str);
+
+      Node* problematic = astLastLeaf(prevNode);
+      parsError(str, problematic->token->lnum, problematic->token->chnum);
     }
 
   } else if(curNode->type == NTFunction) { // DONE
@@ -134,10 +147,20 @@ int reduceExpression() {
     if(nextTType == TTRPar) {
       if(prevPrevNode->type != NTExpression) {
         // If we see a OP EXPR sequence, there must be an EXPR before that 
-        error("Expected expression before operator.");
+        char* format = "Expected expression before operator, found NT %d.";
+        int len = strlen(format) + 6;
+        char str[len];
+        sprintf(str, format, prevPrevNode->type); 
+
+        Node* problematic = astLastLeaf(prevPrevNode);
+        parsError(str, problematic->token->lnum, problematic->token->chnum);
       } else { // EXPR OP EXPR ) sequence, EXPR OP EXPR => EXPR
         stackPop(3);
-        Node node = { NTExpression, NULL, NULL };
+        Node node = { 
+          .type = NTExpression, 
+          .token = NULL, 
+          .children = NULL // set in createAndPush()
+        };
         Node* nodePtr = createAndPush(node, 3);
         nodePtr->children[0] = prevPrevNode;
         nodePtr->children[1] = prevNode;
@@ -167,7 +190,11 @@ int reduceSemi() {
       if(ttype == TTNext) nType = NTNextSt;
 
       stackPop(2);
-      Node node = { nType, NULL, NULL };
+      Node node = { 
+        .type = nType, 
+        .token = NULL, 
+        .children = NULL 
+      };
       Node* nodePtr = createAndPush(node, 2);
       nodePtr->children[0] = prevNode;
       nodePtr->children[1] = curNode;
@@ -181,15 +208,22 @@ int reduceSemi() {
 void reduceRoot() {
   for(int i = 0; i <= pStack.pointer; i++) {
     if(pStack.nodes[i]->type != NTProgramPart) {
+      // build error string
       char* format = "Unexpected NT %d at program root level.";
       int len = strlen(format) + 6;
       char str[len];
       sprintf(str, format, pStack.nodes[i]->type); 
-      error(str);
+
+      Node* problematic = astFirstLeaf(pStack.nodes[i]);
+      parsError(str, problematic->token->lnum, problematic->token->chnum);
     }
   }
 
-  Node node = { NTProgram, NULL, NULL };
+  Node node = { 
+    .type = NTProgram, 
+    .token = NULL, 
+    .children = NULL 
+  };
   Node* nodePtr = newNode(node);
   allocChildren(nodePtr, pStack.pointer + 1);
 
@@ -205,7 +239,11 @@ void singleParent(NodeType type) {
   Node* curNode = pStack.nodes[pStack.pointer];
   stackPop(1);
 
-  Node node = { type, NULL, NULL };
+  Node node = { 
+    .type = type, 
+    .token = NULL, 
+    .children = NULL 
+  };
   Node* nodePtr = createAndPush(node, 1);
   nodePtr->children[0] = curNode;
 }

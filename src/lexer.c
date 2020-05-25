@@ -128,7 +128,7 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
       int len = strlen(format) - 1;
       char str[len];
       sprintf(str, format, ch); 
-      error(str);
+      lexError(str);
     }
   }
 }
@@ -211,7 +211,7 @@ void eatNumber()
       }
 
     } else {
-      error("Invalid number.");
+      lexError("Invalid number.");
     }
   }
 
@@ -333,7 +333,7 @@ void eatDQuote()
     bufpos++;
   }
 
-  if(ch == '\n') error("Line break in the middle of string.");
+  if(ch == '\n') lexError("Line break in the middle of string.");
 
   // Here ch == '"'
   buffer[bufpos] = ch;

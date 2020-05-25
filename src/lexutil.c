@@ -151,7 +151,7 @@ void printFile(FILE* file) {
   rewind(file);
 }
 
-void error(char* msg) {
+void lexError(char* msg) {
   printf("ERROR: %s\n%s: line: %d, column: %d.\n", msg, lexerState.filename, 
     lexerState.lnum, lexerState.chnum);
   printCharInFile(lexerState.file, lexerState.lnum, lexerState.chnum);

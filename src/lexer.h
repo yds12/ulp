@@ -139,7 +139,7 @@ void printCharInFile(FILE* file, int lnum, int chnum);
  * msg: message to be printed. 
  *
  */
-void error(char* msg);
+void lexError(char* msg);
 
 /*
  * Checks whether a character is whitespace. 

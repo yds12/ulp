@@ -31,6 +31,7 @@ typedef struct stNode {
   NodeType type;
   Token* token;
   struct stNode** children;
+  int nChildren;
 } Node;
 
 typedef struct stParserStack {
@@ -38,6 +39,15 @@ typedef struct stParserStack {
   int pointer;
   int maxSize;
 } ParserStack;
+
+typedef struct stParserState {
+  FILE* file;
+  char* filename;
+  int nextToken;
+} ParserState;
+
+// Global state of the parser
+ParserState parserState;
 
 // The stack of subtrees of the LR parser
 ParserStack pStack;
@@ -50,8 +60,6 @@ int maxNodes;
 
 // Number of nodes created so far
 int nodeCount;
-
-int nextToken;
 
 void parserStart();
 
@@ -70,6 +78,12 @@ void allocChildren(Node* node, int nChildren);
 Token lookAhead();
 
 int isSubStatement(NodeType type);
+
+void parsError(char* msg, int lnum, int chnum);
+
+Node* astFirstLeaf(Node* ast);
+
+Node* astLastLeaf(Node* ast);
 
 #endif
 

@@ -64,8 +64,8 @@ Node* stackPop(int n) {
 }
 
 Token lookAhead() {
-  if(nextToken < lexerState.nTokens)
-    return lexerState.tokens[nextToken];
+  if(parserState.nextToken < lexerState.nTokens)
+    return lexerState.tokens[parserState.nextToken];
 
   // Ideally this function shouldn't be called if there are no tokens left.
   Token token = { NULL, 0, TTEof, 0, 0 };
@@ -74,6 +74,7 @@ Token lookAhead() {
 
 void allocChildren(Node* node, int nChildren) {
   node->children = (Node**) malloc(sizeof(Node*) * nChildren);
+  node->nChildren = nChildren;
 }
 
 int isSubStatement(NodeType type) {
@@ -82,5 +83,16 @@ int isSubStatement(NodeType type) {
      type == NTMatchSt)
     return 1;
   return 0;
+}
+
+void parsError(char* msg, int lnum, int chnum) {
+  if(lnum > 0) {
+    printf("\nERROR: %s\n%s: line: %d, column: %d.\n", 
+      msg, parserState.filename, lnum, chnum);
+    printCharInFile(parserState.file, lnum, chnum);
+  } else {
+    printf("\nERROR: %s\n%s.\n", msg, parserState.filename);
+  }
+  exit(1);
 }
 
