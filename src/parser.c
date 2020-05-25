@@ -7,6 +7,9 @@
 
 void shift();
 int reduce();
+int reduceSemi();
+int reduceExpression();
+void reduceRoot();
 void printStack();
 
 // Replaces the current stack top with a parent node of specified type
@@ -60,51 +63,12 @@ int reduce() {
     printf("Entering reduce with type %d\n", curNode->type);
 #endif
 
-
-  if(curNode->type == NTTerminal && curNode->token->type == TTSemi) {
-
-#ifdef DEBUG
-    printf("is semi\n");
-#endif
-
-    if(!prevNode || prevNode->type == NTProgramPart) {
-      // we are reading a semicolon and the previous statement is already
-      // reduced.
-      singleParent(NTNoop);
-      reduced = 1;
-    } else if(prevNode->type == NTTerminal 
-              && prevNode->token->type == TTBreak) {
-      stackPop(2);
-      Node node = { NTBreakSt, NULL, NULL };
-      Node* nodePtr = createAndPush(node, 2);
-      nodePtr->children[0] = prevNode;
-      nodePtr->children[1] = curNode;
-      reduced = 1;
-    } else if(prevNode->type == NTTerminal 
-              && prevNode->token->type == TTNext) {
-      stackPop(2);
-      Node node = { NTNextSt, NULL, NULL };
-      Node* nodePtr = createAndPush(node, 2);
-      nodePtr->children[0] = prevNode;
-      nodePtr->children[1] = curNode;
+  if(curNode->type == NTProgramPart) { // DONE
+    if(lookAhead().type == TTEof) {
+      reduceRoot();
       reduced = 1;
     }
-
-  } else if(curNode->type == NTTerminal && isLiteral(curNode->token->type)) {
-
-#ifdef DEBUG
-    printf("is literal\n");
-#endif
-
-    // we have a literal, becomes term
-    singleParent(NTTerm);
-    reduced = 1;
-
-  } else if(curNode->type == NTStatement) {
-
-#ifdef DEBUG
-    printf("is statement\n");
-#endif
+  } else if(curNode->type == NTStatement) { // UNFINISHED
 
     if(!prevNode || prevNode->type == NTProgramPart) {
       // we have a finished statement and the previous statement is already
@@ -119,50 +83,122 @@ int reduce() {
       error(str);
     }
 
-  } else if(isSubStatement(curNode->type)) {
-
-#ifdef DEBUG
-    printf("is sub statement\n");
-#endif
-
+  } else if(curNode->type == NTFunction) { // DONE
+    singleParent(NTProgramPart);
+    reduced = 1;
+  } else if(isSubStatement(curNode->type)) { // DONE
+    // Substatements: NTIfSt, NTNoop, NTNextSt, NTBreakSt, NTWhileSt,
+    // NTMatchSt, NTLoopSt. 
     singleParent(NTStatement);
     reduced = 1;
+  } else if(curNode->type == NTExpression) { // UNFINISHED 
+    reduced = reduceExpression();
+  } else if(curNode->type == NTTerm) { // UNFINISHED
+    singleParent(NTExpression);
+    reduced = 1;
+  } else if(curNode->type == NTLiteral) { // DONE
+    singleParent(NTTerm);
+    reduced = 1;
+  } else if(curNode->type == NTBinaryOp) { // UNFINISHED
+  } else if(curNode->type == NTTerminal) { // UNFINISHED
+    TokenType ttype = curNode->token->type;
 
+    if(isBinaryOp(ttype)) {
+      singleParent(NTBinaryOp);
+      reduced = 1;
+    } else if(isLiteral(ttype)) {
+      singleParent(NTLiteral);
+      reduced = 1;
+    } else if(ttype == TTBreak) { // wait next shift
+    } else if(ttype == TTNext) { // wait next shift
+    } else if(ttype == TTSemi) {
+      reduced = reduceSemi();
+    }
   }
 
   return reduced;
+}
 
-  /*Node* curNode = &pStack.nodes[pStack.pointer];
+int reduceExpression() {
+  int reduced = 0;
+  Node* curNode = pStack.nodes[pStack.pointer];
   Node* prevNode = NULL;
-  if(pStack.pointer >= 1) prevNode = &pStack.nodes[pStack.pointer - 1];
+  if(pStack.pointer >= 1) prevNode = pStack.nodes[pStack.pointer - 1];
 
-  if(curNode->type == NTLiteral) {
+  if(prevNode && prevNode->type == NTBinaryOp) {
+    Node* prevPrevNode = NULL;
+    if(pStack.pointer >= 2) prevPrevNode = pStack.nodes[pStack.pointer - 2];
 
-    Node node = { NULL, NTTerm, NULL }; 
-    allocChildren(&node, 1);
-    node.children[0] = curNode;
-    stackPop(1);
-    stackPush(&node);
+    TokenType nextTType = lookAhead().type;
 
-  } else if(curNode->type == NTTerm) {
-
-    if(prevNode && prevNode->type == NTBinaryOp) {
-      Node* prevPrevNode = NULL;
-      if(pStack.pointer >= 2) prevPrevNode = &pStack.nodes[pStack.pointer - 2];
-      else error("Missing operand."); // TODO: error should not use lexerState
-
-      Node node = { NULL, NTTerm, NULL };
-      allocChildren(&node, 3);
-      node.children[0] = prevPrevNode;
-      node.children[1] = prevNode;
-      node.children[2] = curNode;
-      stackPop(3);
-      stackPush(&node);
+    if(nextTType == TTRPar) {
+      if(prevPrevNode->type != NTExpression) {
+        // If we see a OP EXPR sequence, there must be an EXPR before that 
+        error("Expected expression before operator.");
+      } else { // EXPR OP EXPR ) sequence, EXPR OP EXPR => EXPR
+        stackPop(3);
+        Node node = { NTExpression, NULL, NULL };
+        Node* nodePtr = createAndPush(node, 3);
+        nodePtr->children[0] = prevPrevNode;
+        nodePtr->children[1] = prevNode;
+        nodePtr->children[2] = curNode;
+        reduced = 1;
+      }
     }
-    else {
-    }
+  }
 
-  }*/
+  return reduced;
+}
+
+int reduceSemi() {
+  int reduced = 0;
+  Node* curNode = pStack.nodes[pStack.pointer];
+  Node* prevNode = NULL;
+  if(pStack.pointer >= 1) prevNode = pStack.nodes[pStack.pointer - 1];
+
+  if(!prevNode || prevNode->type == NTProgramPart) {
+    singleParent(NTNoop);
+    reduced = 1;
+  } else if(prevNode->type == NTTerminal) {
+    TokenType ttype = prevNode->token->type;
+
+    if(ttype == TTBreak || ttype == TTNext) {
+      NodeType nType = NTBreakSt;
+      if(ttype == TTNext) nType = NTNextSt;
+
+      stackPop(2);
+      Node node = { nType, NULL, NULL };
+      Node* nodePtr = createAndPush(node, 2);
+      nodePtr->children[0] = prevNode;
+      nodePtr->children[1] = curNode;
+      reduced = 1;
+    }
+  }
+
+  return reduced;
+}
+
+void reduceRoot() {
+  for(int i = 0; i <= pStack.pointer; i++) {
+    if(pStack.nodes[i]->type != NTProgramPart) {
+      char* format = "Unexpected NT %d at program root level.";
+      int len = strlen(format) + 6;
+      char str[len];
+      sprintf(str, format, pStack.nodes[i]->type); 
+      error(str);
+    }
+  }
+
+  Node node = { NTProgram, NULL, NULL };
+  Node* nodePtr = newNode(node);
+  allocChildren(nodePtr, pStack.pointer + 1);
+
+  for(int i = 0; i <= pStack.pointer; i++) {
+    nodePtr->children[i] = pStack.nodes[i];
+  }
+
+  stackPop(pStack.pointer + 1);
+  stackPush(nodePtr);
 }
 
 void singleParent(NodeType type) {
