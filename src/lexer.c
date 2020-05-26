@@ -83,7 +83,7 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
 
 // Prints the source file
 #ifdef DEBUG
-  printFile(sourcefile);
+//  printFile(sourcefile);
 #endif
 
   // Buffer to read the chars, is reset at the end of each token

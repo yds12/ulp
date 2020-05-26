@@ -22,7 +22,11 @@ An example can be found at [`docs/sample.ulp`](docs/sample.ulp).
 ## Roadmap
 
 Currently, the compiler is capable of parsing the program
-[`docs/current.ulp`](docs/current.ulp).
+[`docs/current.ulp`](docs/current.ulp). If you have `graphviz` installed in
+your machine, you can check the parse trees by using the auxiliar script 
+in `aux/view`:
+
+    $ aux/view docs/current.ulp
 
 Version **0.0.x**: each merge to master should increase `x`.
 

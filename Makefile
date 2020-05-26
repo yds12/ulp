@@ -1,15 +1,15 @@
-ODir=bin
-BDir=bin
+ODir=build
+BDir=build
 SDir=src
-Exec=bin/compiler
+Exec=build/ulpc
 CC=gcc
 Sources=src/*.c
 Opt=-g
 
-build:
+compile:
 	$(CC) $(Opt) $(Sources) -o $(Exec) 
 
 clean:
 	-rm -f $(BDir)/* $(ODir)/* $(Exec)
 
-rebuild: clean build
+rebuild: clean compile

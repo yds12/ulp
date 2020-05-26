@@ -7,7 +7,10 @@
  *
  */
 
-#include "parser.h"
+#include <string.h>
+#include "ast.h"
+
+void graphvizAstRec(Node* node);
 
 Node* astFirstLeaf(Node* ast) {
   Node* firstChild = ast;
@@ -29,3 +32,24 @@ Node* astLastLeaf(Node* ast) {
   }
   return lastChild;
 }
+
+void graphvizAst(Node* ast) {
+  printf("digraph G {\n");
+  graphvizAstRec(ast);
+  printf("}");
+  printf("\n");
+}
+
+void graphvizAstRec(Node* node) {
+  char* format = "%s";
+  int len = strlen(format) + MAX_NODE_NAME;
+  char nodeName[len];
+  strReplaceNodeAbbrev(nodeName, format, node); 
+
+  printf("%d [label=\"%s\"];\n", node->id, nodeName);
+  for(int i = 0; i < node->nChildren; i++) {
+    printf("%d -> %d;\n", node->id, node->children[i]->id);
+    graphvizAstRec(node->children[i]);
+  }
+}
+

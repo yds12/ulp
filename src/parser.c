@@ -2,6 +2,7 @@
 #include <string.h>
 #include "lexer.h"
 #include "parser.h"
+#include "ast.h"
 
 #define DEBUG
 
@@ -12,7 +13,6 @@ int reduceExpression();
 int reduceRPar();
 int reduceIdentifier();
 void reduceRoot();
-void printStack();
 
 // Replaces the current stack top with a parent node of specified type
 void singleParent(NodeType type);
@@ -35,13 +35,12 @@ void parserStart() {
 
     do {
       success = reduce(); 
-
-#ifdef DEBUG
-    printStack();
-#endif
-
     } while(success);
   }
+
+#ifdef DEBUG
+  graphvizAst(pStack.nodes[pStack.pointer]);
+#endif
 }
 
 void shift() {
@@ -55,11 +54,6 @@ void shift() {
     .nChildren = 0
   };
   createAndPush(node, 0);
-
-#ifdef DEBUG
-    printStack();
-#endif
-
 }
 
 int reduce() {
@@ -68,10 +62,6 @@ int reduce() {
   if(pStack.pointer >= 1) prevNode = pStack.nodes[pStack.pointer - 1];
 
   int reduced = 0;
-
-#ifdef DEBUG
-    printf("Entering reduce with type %d\n", curNode->type);
-#endif
 
   if(curNode->type == NTProgramPart) { // DONE
     if(lookAhead().type == TTEof) {
@@ -272,12 +262,6 @@ int reduceExpression() {
         Node* problematic = astLastLeaf(prevPrevNode);
         parsError(str, problematic->token->lnum, problematic->token->chnum);
       } else { // EXPR OP EXPR TERMINATOR sequence, EXPR OP EXPR => EXPR
-
-#ifdef DEBUG
-printf("REDUCED EXPR: %s EXPR %s\n", prevNode->children[0]->token->name,
-laToken.name);
-#endif
-
         stackPop(3);
         Node node = { 
           .type = NTExpression, 
@@ -304,14 +288,6 @@ laToken.name);
         parsError(str, problematic->token->lnum, problematic->token->chnum);
       } else if(precedence(laType) >= 
                 precedence(prevNode->children[0]->token->type)){ 
-
-#ifdef DEBUG
-printf("REDUCED EXPR: %s EXPR %s\n", prevNode->children[0]->token->name,
-laToken.name);
-printf("PRECEDENCES: %d %d\n", precedence(prevNode->children[0]->token->type),
-precedence(laType));
-#endif
-
         // EXPR OP EXPR OP sequence, reduce if the previous has precedence
         // (<= value for precedence()), otherwise do nothing
         stackPop(3);
@@ -467,15 +443,6 @@ void singleParent(NodeType type) {
   };
   Node* nodePtr = createAndPush(node, 1);
   nodePtr->children[0] = curNode;
-}
-
-void printStack() {
-  printf("Stack: ");
-  for(int i = 0; i <= pStack.pointer; i++) {
-    Node* node = pStack.nodes[i];
-    printf(" %d", node->type);
-  }
-  printf(".\n");
 }
 
 int canPrecedeStatement(Node* node) {

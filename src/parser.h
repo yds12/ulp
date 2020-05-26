@@ -8,7 +8,7 @@
 
 #include "lexer.h"
 
-// Maximum length of a node type name
+// A node type name cannot exceed this length
 #define MAX_NODE_NAME 40
 
 typedef enum stNodeType {
@@ -42,6 +42,7 @@ typedef struct stNode {
   Token* token;
   struct stNode** children;
   int nChildren;
+  int id;
 } Node;
 
 typedef struct stParserStack {
@@ -91,11 +92,11 @@ int isSubStatement(NodeType type);
 
 void strReplaceNodeName(char* str, char* format, Node* node);
 
+void strReplaceNodeAbbrev(char* str, char* format, Node* node);
+
 void parsError(char* msg, int lnum, int chnum);
 
-Node* astFirstLeaf(Node* ast);
-
-Node* astLastLeaf(Node* ast);
+void printStack();
 
 #endif
 
