@@ -80,7 +80,7 @@ void allocChildren(Node* node, int nChildren) {
 int isSubStatement(NodeType type) {
   if(type == NTBreakSt || type == NTNextSt || type == NTIfSt ||
      type == NTLoopSt || type == NTWhileSt || type == NTNoop ||
-     type == NTMatchSt || type == NTCallSt)
+     type == NTMatchSt || type == NTCallSt || type == NTAssignment)
     return 1;
   return 0;
 }

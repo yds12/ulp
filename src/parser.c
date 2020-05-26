@@ -9,6 +9,7 @@ void shift();
 int reduce();
 int reduceSemi();
 int reduceExpression();
+int reduceRPar();
 int reduceIdentifier();
 void reduceRoot();
 void printStack();
@@ -98,6 +99,13 @@ int reduce() {
   } else if(curNode->type == NTFunction) { // DONE
     singleParent(NTProgramPart);
     reduced = 1;
+  } else if(curNode->type == NTDeclaration) { // DONE
+    if(!prevNode || prevNode->type == NTStatement
+       || prevNode->type == NTProgramPart) { // independent declaration
+      singleParent(NTProgramPart);
+      reduced = 1;
+    } else { // declaration part of FOR statement -- do nothing
+    }
   } else if(isSubStatement(curNode->type)) { // DONE
     // Substatements: NTIfSt, NTNoop, NTNextSt, NTBreakSt, NTWhileSt,
     // NTMatchSt, NTLoopSt. 
@@ -131,9 +139,55 @@ int reduce() {
       reduced = 1;
     } else if(ttype == TTBreak) { // wait next shift
     } else if(ttype == TTNext) { // wait next shift
+    } else if(ttype == TTRPar) {
+      reduced = reduceRPar();
     } else if(ttype == TTSemi) {
       reduced = reduceSemi();
     }
+  }
+
+  return reduced;
+}
+
+int reduceRPar() {
+  int reduced = 0;
+  Node* curNode = pStack.nodes[pStack.pointer];
+  Node* prevNode = NULL;
+  Node* prevPrevNode = NULL;
+  if(pStack.pointer >= 1) prevNode = pStack.nodes[pStack.pointer - 1];
+  if(pStack.pointer >= 2) prevPrevNode = pStack.nodes[pStack.pointer - 2];
+
+  if(!prevNode) {
+    Node* problematic = astLastLeaf(curNode);
+    parsError("Program beginning with ')'.", 
+      problematic->token->lnum, problematic->token->chnum);
+  }
+  if(prevNode->type == NTProgramPart || prevNode->type == NTStatement) {
+    char* format = "Unexpected ')' after %s.";
+    int len = strlen(format) + MAX_NODE_NAME;
+    char str[len];
+    strReplaceNodeName(str, format, prevNode); 
+
+    Node* problematic = astLastLeaf(prevNode);
+    parsError(str, problematic->token->lnum, problematic->token->chnum);
+  }
+
+  if(prevNode->type == NTExpression) {
+    if(prevPrevNode && prevPrevNode->type == NTTerminal &&
+       prevPrevNode->token->type == TTLPar) {
+      // (EXPR) -- reduce
+      stackPop(3);
+      Node node = { 
+        .type = NTExpression, 
+        .token = NULL, 
+        .children = NULL
+      };
+      Node* nodePtr = createAndPush(node, 1);
+      nodePtr->children[0] = prevNode; // parentheses are ignored
+      reduced = 1;
+    }
+  } else if(prevNode->type == NTCallParam) {
+    // ID(PARAM,...,PARAM) -- function call
   }
 
   return reduced;
@@ -192,7 +246,7 @@ int reduceExpression() {
 
   if(!prevNode) { // error: starting program with expression
     Node* problematic = astLastLeaf(curNode);
-    parsError("Unexpected expression at the beginning of the program.", 
+    parsError("Program beginning with expression.", 
       problematic->token->lnum, problematic->token->chnum);
   }
   else if(prevNode->type == NTProgramPart || prevNode->type == NTStatement) {
@@ -288,7 +342,9 @@ int reduceSemi() {
   int reduced = 0;
   Node* curNode = pStack.nodes[pStack.pointer];
   Node* prevNode = NULL;
+  Node* prevPrevNode = NULL;
   if(pStack.pointer >= 1) prevNode = pStack.nodes[pStack.pointer - 1];
+  if(pStack.pointer >= 2) prevPrevNode = pStack.nodes[pStack.pointer - 2];
 
   if(!prevNode || prevNode->type == NTProgramPart) {
     singleParent(NTNoop);
@@ -310,6 +366,60 @@ int reduceSemi() {
       nodePtr->children[0] = prevNode;
       nodePtr->children[1] = curNode;
       reduced = 1;
+    }
+  } else if(prevNode->type == NTExpression) {
+    if(prevPrevNode && prevPrevNode->type == NTTerminal &&
+       prevPrevNode->token->type == TTAssign) { 
+      // assignment or declaration with assignment
+      Node* prev3 = NULL;
+      Node* prev4 = NULL;
+      if(pStack.pointer >= 1) prev3 = pStack.nodes[pStack.pointer - 3];
+      if(pStack.pointer >= 2) prev4 = pStack.nodes[pStack.pointer - 4];
+
+      if(prev3 && prev3->type == NTIdentifier) {
+        if(!prev4) { // error
+          char* format = "Assignment to undeclared variable '%s'.";
+          int len = strlen(format) + prev3->children[0]->token->nameSize;
+          char str[len];
+          sprintf(str, format, prev3->children[0]->token->name);
+
+          Node* problematic = astFirstLeaf(prev3);
+          parsError(str, problematic->token->lnum, problematic->token->chnum);
+        } else if(prev4->type == NTProgramPart || prev4->type == NTStatement) {
+          // ID = EXPR ;  -- assignment
+          stackPop(4);
+          Node node = { 
+            .type = NTAssignment, 
+            .token = NULL, 
+            .children = NULL // set in createAndPush()
+          };
+          Node* nodePtr = createAndPush(node, 2);
+          nodePtr->children[0] = prev3; // ID
+          nodePtr->children[1] = prevNode; // EXPR
+          reduced = 1;
+        } else if(prev4->type == NTType) { // declaration w/ assignment
+          // TYPE ID = EXPR ;  -- declaration with assignment
+          stackPop(5);
+          Node node = { 
+            .type = NTDeclaration, 
+            .token = NULL, 
+            .children = NULL // set in createAndPush()
+          };
+          Node* nodePtr = createAndPush(node, 3);
+          nodePtr->children[0] = prev4; // TYPE
+          nodePtr->children[1] = prev3; // ID
+          nodePtr->children[2] = prevNode; // EXPR
+          reduced = 1;
+        }
+      } else { // error
+        char* format = "Assignment to %s.";
+        int len = strlen(format) + MAX_NODE_NAME;
+        char str[len];
+        strReplaceNodeName(str, format, prev3); 
+
+        Node* problematic = astFirstLeaf(prev3);
+        parsError(str, problematic->token->lnum, problematic->token->chnum);
+      }
     }
   }
 
