@@ -1,1 +1,2 @@
+#!/bin/sh
 build/ulpc < "$1" | dot -Tpng > build/ast.png && xviewer build/ast.png

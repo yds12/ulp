@@ -28,6 +28,10 @@ in `aux/view`:
 
     $ aux/view docs/current.ulp
 
+This is an example of AST:
+
+![AST](docs/ast.png)
+
 Version **0.0.x**: each merge to master should increase `x`.
 
 Version **0.1.0**: some executable being generated. Doesn't have to be the
