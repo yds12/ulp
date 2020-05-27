@@ -90,7 +90,7 @@ typedef enum stNodeType {
   NTLoopSt,
   NTWhileSt,
   NTMatchSt,
-  NTCallSt,
+  NTCallExpr,
   NTAssignment,
   NTCallParam,
   NTParam,

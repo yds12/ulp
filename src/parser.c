@@ -10,6 +10,7 @@ int reduce();
 int reduceSemi();
 int reduceExpression();
 int reduceRPar();
+int reduceFunctionCall();
 int reduceIdentifier();
 void reduceRoot();
 
@@ -36,6 +37,11 @@ void parserStart(FILE* file, char* filename, int nTokens, Token* tokens) {
 
     do {
       success = reduce(); 
+
+#ifdef DEBUG
+//printStack();  
+#endif
+
     } while(success);
   }
 
@@ -85,6 +91,94 @@ int reduce() {
 
       Node* problematic = astLastLeaf(prevNode);
       parsError(str, problematic->token->lnum, problematic->token->chnum);
+    } else if(prevNode->type == NTTerminal &&
+              prevNode->token->type == TTColon) {
+      Node* ifNode = NULL;
+      if(pStack.pointer >= 3) ifNode = pStack.nodes[pStack.pointer - 3];
+
+      if(ifNode->type == NTTerminal && ifNode->token->type == TTIf) {
+        Node* condNode = pStack.nodes[pStack.pointer - 2];
+
+        if(condNode->type != NTExpression) { // error
+          char* format = "Unexpected %s as condition for 'if' statement.";
+          int len = strlen(format) + MAX_NODE_NAME;
+          char str[len];
+          strReplaceNodeName(str, format, condNode); 
+
+          Node* problematic = astFirstLeaf(condNode);
+          parsError(str, problematic->token->lnum, problematic->token->chnum);
+        }
+
+        // if statement
+        if(lookAhead().type == TTElse) { 
+          // with else clause -- do nothing now
+        } else { // without else
+          stackPop(4);
+          Node node = { 
+            .type = NTIfSt, 
+            .token = NULL, 
+            .children = NULL // set in createAndPush()
+          };
+          Node* nodePtr = createAndPush(node, 2);
+          nodePtr->children[0] = condNode;
+          nodePtr->children[1] = curNode;
+          reduced = 1;
+        }
+      }
+    } else if(prevNode->type == NTTerminal && prevNode->token->type == TTElse) {
+      if(pStack.pointer < 5) { // error: incomplete if statement
+        Node* problematic = astFirstLeaf(prevNode);
+        parsError("Malformed 'if' statement.", problematic->token->lnum, 
+          problematic->token->chnum);
+      }
+
+      Node* thenNode = pStack.nodes[pStack.pointer - 2];
+      Node* condNode = pStack.nodes[pStack.pointer - 4];
+      Node* ifNode = pStack.nodes[pStack.pointer - 5];
+
+      if(thenNode->type != NTStatement) { // error: statement expected
+        char* format = 
+          "Bad 'if' statement: expected statement, found %s.";
+        int len = strlen(format) + MAX_NODE_NAME;
+        char str[len];
+        strReplaceNodeName(str, format, thenNode); 
+
+        Node* problematic = astFirstLeaf(thenNode);
+        parsError(str, problematic->token->lnum, problematic->token->chnum);
+      }
+      if(condNode->type != NTExpression) { // error: expression expected
+        char* format = 
+          "Bad 'if' condition: expected expression, found %s.";
+        int len = strlen(format) + MAX_NODE_NAME;
+        char str[len];
+        strReplaceNodeName(str, format, condNode); 
+
+        Node* problematic = astFirstLeaf(condNode);
+        parsError(str, problematic->token->lnum, problematic->token->chnum);
+      }
+      if(ifNode->type != NTTerminal || ifNode->token->type != TTIf) { 
+        // error: 'if' keyword expected
+        char* format = 
+          "Bad 'if' statement: expected 'if' keyword, found %s.";
+        int len = strlen(format) + MAX_NODE_NAME;
+        char str[len];
+        strReplaceNodeName(str, format, ifNode); 
+
+        Node* problematic = astFirstLeaf(ifNode);
+        parsError(str, problematic->token->lnum, problematic->token->chnum);
+      }
+
+      stackPop(6);
+      Node node = { 
+        .type = NTIfSt, 
+        .token = NULL, 
+        .children = NULL // set in createAndPush()
+      };
+      Node* nodePtr = createAndPush(node, 3);
+      nodePtr->children[0] = condNode;
+      nodePtr->children[1] = thenNode;
+      nodePtr->children[2] = curNode;
+      reduced = 1;
     }
 
   } else if(curNode->type == NTFunction) { // DONE
@@ -104,11 +198,21 @@ int reduce() {
     reduced = 1;
   } else if(curNode->type == NTExpression) { // UNFINISHED 
     reduced = reduceExpression();
+  } else if(curNode->type == NTCallExpr) { // DONE
+    if(!prevNode || prevNode->type == NTStatement
+       || prevNode->type == NTProgramPart) { // call statement 
+      singleParent(NTStatement);
+      reduced = 1;
+    } else { // call expression 
+      singleParent(NTExpression);
+      reduced = 1;
+    }
   } else if(curNode->type == NTTerm) { // UNFINISHED
     singleParent(NTExpression);
     reduced = 1;
   } else if(curNode->type == NTLiteral) { // DONE
-    singleParent(NTTerm);
+    //singleParent(NTTerm);
+    singleParent(NTExpression);
     reduced = 1;
   } else if(curNode->type == NTBinaryOp) { // UNFINISHED
   } else if(curNode->type == NTIdentifier) { // UNFINISHED
@@ -177,8 +281,64 @@ int reduceRPar() {
       nodePtr->children[0] = prevNode; // parentheses are ignored
       reduced = 1;
     }
-  } else if(prevNode->type == NTCallParam) {
-    // ID(PARAM,...,PARAM) -- function call
+  } else if(prevNode->type == NTCallParam ||
+            (prevNode->type == NTTerminal && prevNode->token->type == TTLPar)) {
+    reduced = reduceFunctionCall();
+  }
+
+  return reduced;
+}
+
+int reduceFunctionCall() {
+  int reduced = 0;
+  Node* prevNode = NULL;
+  prevNode = pStack.nodes[pStack.pointer - 1];
+
+  if(prevNode->type == NTCallParam) { // at least one param
+    Node* idNode = prevNode;
+    int nParams = 0;
+    int idIndex = 0;
+
+    while(idNode->type != NTIdentifier) { // find the function name
+      nParams++;
+      if(pStack.pointer >= 1 + (nParams * 2)) {
+        idIndex = pStack.pointer - (1 + nParams * 2);
+        idNode = pStack.nodes[idIndex];
+      } else { // this should never happen (as param checks for this)
+        Node* problematic = astFirstLeaf(prevNode);
+        parsError("Malformed function call expression.", 
+          problematic->token->lnum, problematic->token->chnum);
+      }
+    }
+
+    Node node = { 
+      .type = NTCallExpr, 
+      .token = NULL, 
+      .children = NULL
+    };
+    Node* nodePtr = newNode(node);
+    allocChildren(nodePtr, nParams + 1);
+    nodePtr->children[0] = idNode;
+
+    for(int i = 1; i <= nParams; i++)
+      nodePtr->children[i] = pStack.nodes[idIndex + i * 2];
+
+    stackPop(2 + nParams * 2);
+    stackPush(nodePtr);
+    reduced = 1;
+  } else if(prevNode->type == NTTerminal && prevNode->token->type == TTLPar) {
+    // ID()  -- function call without params
+    Node* idNode = pStack.nodes[pStack.pointer - 2];
+
+    stackPop(3);
+    Node node = { 
+      .type = NTCallExpr, 
+      .token = NULL, 
+      .children = NULL
+    };
+    Node* nodePtr = createAndPush(node, 1);
+    nodePtr->children[0] = idNode; // parentheses are ignored
+    reduced = 1;
   }
 
   return reduced;
@@ -216,7 +376,8 @@ int reduceIdentifier() {
         reduced = 1;
       }
     } else { // term
-      singleParent(NTTerm);
+      //singleParent(NTTerm);
+      singleParent(NTExpression);
       reduced = 1;
     }
   }
@@ -251,7 +412,44 @@ int reduceExpression() {
     parsError(str, problematic->token->lnum, problematic->token->chnum);
   }
 
-  if(isExprTerminator(laType)) {
+  if(prevNode->type == NTTerminal && prevNode->token->type == TTLPar) {
+    if(!prevPrevNode) { // error: beginning program with parenthesis
+      // TODO: make a check for illegal beginnings so we don't have to check
+      // this all the time
+      Node* problematic = astFirstLeaf(prevNode);
+      parsError("Program beginning with parenthesis.", 
+        problematic->token->lnum, problematic->token->chnum);
+    } else if(prevPrevNode->type == NTIdentifier) { 
+      if(laType == TTComma || laType == TTRPar) {
+        // ID ( EXPR ,   or   ID ( EXPR )   -- call parameter
+        singleParent(NTCallParam);
+        reduced = 1;
+      }
+    }
+  }
+  else if(prevNode->type == NTTerminal && prevNode->token->type == TTComma) {
+    if(!prevPrevNode) { // error: beginning program with parenthesis
+      // TODO: make a check for illegal beginnings so we don't have to check
+      // this all the time
+      Node* problematic = astFirstLeaf(prevNode);
+      parsError("Program beginning with a comma.", 
+        problematic->token->lnum, problematic->token->chnum);
+    } else if(prevPrevNode->type == NTCallParam) { // another call param
+      singleParent(NTCallParam);
+      reduced = 1;
+    } else if(prevPrevNode->type == NTDeclaration) { // for statement
+      // do nothing
+    } else { // unexpected node before: , EXPR
+      char* format = "Expected parameter or declaration, found %s.";
+      int len = strlen(format) + MAX_NODE_NAME;
+      char str[len];
+      strReplaceNodeName(str, format, prevPrevNode); 
+
+      Node* problematic = astFirstLeaf(prevPrevNode);
+      parsError(str, problematic->token->lnum, problematic->token->chnum);
+    }
+  }
+  else if(isExprTerminator(laType)) {
     if(prevNode->type == NTBinaryOp) {
       if(prevPrevNode && prevPrevNode->type != NTExpression) {
         // If we see a OP EXPR sequence, there must be an EXPR before that 

@@ -54,7 +54,6 @@ void stackPush(Node* node) {
 
     pStack.maxSize *= 2;
   }
-
   pStack.pointer++;
   pStack.nodes[pStack.pointer] = node;
 }
@@ -82,16 +81,14 @@ void allocChildren(Node* node, int nChildren) {
 int isSubStatement(NodeType type) {
   if(type == NTBreakSt || type == NTNextSt || type == NTIfSt ||
      type == NTLoopSt || type == NTWhileSt || type == NTNoop ||
-     type == NTMatchSt || type == NTCallSt || type == NTAssignment)
+     type == NTMatchSt || type == NTAssignment)
     return 1;
   return 0;
 }
 
 void parsError(char* msg, int lnum, int chnum) {
   if(lnum > 0) {
-    printf("\nSyntax " ERROR_COLOR_START "ERROR" COLOR_END 
-      ": %s\n%s: line: %d, column: %d.\n", 
-      msg, parserState.filename, lnum, chnum);
+    printf("\nSyntax " ERROR_COLOR_START "ERROR" COLOR_END ": %s\n", msg);
     printCharInFile(parserState.file, parserState.filename, lnum, chnum);
   } else {
     printf("\nSyntax " ERROR_COLOR_START "ERROR" COLOR_END 
@@ -104,7 +101,11 @@ void printStack() {
   printf("Stack: ");
   for(int i = 0; i <= pStack.pointer; i++) {
     Node* node = pStack.nodes[i];
-    printf(" %d", node->type);
+
+    if(node->type == NTTerminal)
+      printf(" %s", node->token->name);
+    else
+      printf(" %d", node->type);
   }
   printf(".\n");
 }

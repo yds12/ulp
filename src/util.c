@@ -115,7 +115,7 @@ void printCharInFile(FILE* file, char* filename, int lnum, int chnum) {
     else buff_mark[i] = '^';
   }
 
-  printf("%s:%d:%d:\n\n", filename, lnum, chnum);
+  printf("%s: line %d, column %d:\n\n", filename, lnum, chnum);
   printf("%s", buff);
   printf("%s\n", buff_mark);
 }
@@ -167,6 +167,10 @@ void strReplaceNodeName(char* str, char* format, Node* node) {
       break;
     case NTDeclaration: sprintf(str, format, "declaration");
       break;
+    case NTCallExpr: sprintf(str, format, "function call");
+      break;
+    case NTCallParam: sprintf(str, format, "parameter expression");
+      break;
     default: sprintf(str, format, "NT");
       break;
   }
@@ -196,8 +200,7 @@ void strReplaceNodeAbbrev(char* str, char* format, Node* node) {
       break;
     case NTMatchSt: sprintf(str, format, "MATCH st");
       break;
-    case NTProgramPart: sprintf(str, format, 
-                                "PP");
+    case NTProgramPart: sprintf(str, format, "PP");
       break;
     case NTStatement: sprintf(str, format, "STAT");
       break;
@@ -218,6 +221,10 @@ void strReplaceNodeAbbrev(char* str, char* format, Node* node) {
     case NTIdentifier: sprintf(str, format, "ID");
       break;
     case NTDeclaration: sprintf(str, format, "DECL");
+      break;
+    case NTCallExpr: sprintf(str, format, "CALL");
+      break;
+    case NTCallParam: sprintf(str, format, "C PARAM");
       break;
     default: sprintf(str, format, "NT");
       break;
