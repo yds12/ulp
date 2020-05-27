@@ -2,7 +2,8 @@
 #ifndef AST_H
 #define AST_H
 
-#include "parser.h"
+#include "util.h"
+#include "datast.h"
 
 Node* astFirstLeaf(Node* ast);
 Node* astLastLeaf(Node* ast);

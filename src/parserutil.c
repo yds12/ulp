@@ -9,6 +9,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "util.h"
 #include "parser.h"
 
 #define INITIAL_STACK_SIZE 100
@@ -65,8 +66,8 @@ Node* stackPop(int n) {
 }
 
 Token lookAhead() {
-  if(parserState.nextToken < lexerState.nTokens)
-    return lexerState.tokens[parserState.nextToken];
+  if(parserState.nextToken < parserState.nTokens)
+    return parserState.tokens[parserState.nextToken];
 
   // Ideally this function shouldn't be called if there are no tokens left.
   Token token = { NULL, 0, TTEof, 0, 0 };
@@ -88,11 +89,13 @@ int isSubStatement(NodeType type) {
 
 void parsError(char* msg, int lnum, int chnum) {
   if(lnum > 0) {
-    printf("\nERROR: %s\n%s: line: %d, column: %d.\n", 
+    printf("\nSyntax " ERROR_COLOR_START "ERROR" COLOR_END 
+      ": %s\n%s: line: %d, column: %d.\n", 
       msg, parserState.filename, lnum, chnum);
-    printCharInFile(parserState.file, lnum, chnum);
+    printCharInFile(parserState.file, parserState.filename, lnum, chnum);
   } else {
-    printf("\nERROR: %s\n%s.\n", msg, parserState.filename);
+    printf("\nSyntax " ERROR_COLOR_START "ERROR" COLOR_END 
+      ": %s\n%s.\n", msg, parserState.filename);
   }
   exit(1);
 }
@@ -104,109 +107,5 @@ void printStack() {
     printf(" %d", node->type);
   }
   printf(".\n");
-}
-
-void strReplaceNodeName(char* str, char* format, Node* node) {
-  NodeType type = node->type;
-
-  if(type == NTTerminal) {
-    char strToken[node->token->nameSize + 10];
-    char* strTokenFormat = "token '%s'";
-    sprintf(strToken, strTokenFormat, node->token->name);
-    sprintf(str, format, strToken);
-  } 
-  else switch(type) {
-    case NTBreakSt: sprintf(str, format, "'break' statement");
-      break;
-    case NTNextSt: sprintf(str, format, "'next' statement");
-      break;
-    case NTIfSt: sprintf(str, format, "'if' statement");
-      break;
-    case NTLoopSt: sprintf(str, format, "'loop' statement");
-      break;
-    case NTWhileSt: sprintf(str, format, "'while' statement");
-      break;
-    case NTNoop: sprintf(str, format, "empty statement");
-      break;
-    case NTMatchSt: sprintf(str, format, "'match' statement");
-      break;
-    case NTProgramPart: sprintf(str, format, 
-                                "function declaration or statement");
-      break;
-    case NTStatement: sprintf(str, format, "statement");
-      break;
-    case NTFunction: sprintf(str, format, "function declaration");
-      break;
-    case NTExpression: sprintf(str, format, "expression");
-      break;
-    case NTTerm: sprintf(str, format, "term");
-      break;
-    case NTLiteral: sprintf(str, format, "literal");
-      break;
-    case NTBinaryOp: sprintf(str, format, "binary operator");
-      break;
-    case NTProgram: sprintf(str, format, "complete program");
-      break;
-    case NTType: sprintf(str, format, "type");
-      break;
-    case NTIdentifier: sprintf(str, format, "identifier");
-      break;
-    case NTDeclaration: sprintf(str, format, "declaration");
-      break;
-    default: sprintf(str, format, "NT");
-      break;
-  }
-}
-
-void strReplaceNodeAbbrev(char* str, char* format, Node* node) {
-  NodeType type = node->type;
-
-  if(type == NTTerminal) {
-    char strToken[node->token->nameSize + 10];
-    char* strTokenFormat = "%s";
-    sprintf(strToken, strTokenFormat, node->token->name);
-    sprintf(str, format, strToken);
-  } 
-  else switch(type) {
-    case NTBreakSt: sprintf(str, format, "BREAK st");
-      break;
-    case NTNextSt: sprintf(str, format, "NEXT st");
-      break;
-    case NTIfSt: sprintf(str, format, "IF st");
-      break;
-    case NTLoopSt: sprintf(str, format, "LOOP st");
-      break;
-    case NTWhileSt: sprintf(str, format, "WHILE st");
-      break;
-    case NTNoop: sprintf(str, format, "NOOP");
-      break;
-    case NTMatchSt: sprintf(str, format, "MATCH st");
-      break;
-    case NTProgramPart: sprintf(str, format, 
-                                "PP");
-      break;
-    case NTStatement: sprintf(str, format, "STAT");
-      break;
-    case NTFunction: sprintf(str, format, "F DECL");
-      break;
-    case NTExpression: sprintf(str, format, "EXPR");
-      break;
-    case NTTerm: sprintf(str, format, "TERM");
-      break;
-    case NTLiteral: sprintf(str, format, "LIT");
-      break;
-    case NTBinaryOp: sprintf(str, format, "OP");
-      break;
-    case NTProgram: sprintf(str, format, "PROGRAM");
-      break;
-    case NTType: sprintf(str, format, "TYPE");
-      break;
-    case NTIdentifier: sprintf(str, format, "ID");
-      break;
-    case NTDeclaration: sprintf(str, format, "DECL");
-      break;
-    default: sprintf(str, format, "NT");
-      break;
-  }
 }
 

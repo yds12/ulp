@@ -8,15 +8,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
-
-// Represents a token.
-typedef struct stToken {
-  char * name;
-  int nameSize;
-  short type;
-  int lnum;
-  int chnum;
-} Token;
+#include "datast.h"
 
 // Represents the global state of the lexer.
 typedef struct stLexerState {
@@ -36,63 +28,6 @@ typedef struct stLexerState {
 // Global state of the lexer.
 LexerState lexerState;
 
-// Represents the types of tokens allowed in the language.
-typedef enum enTokenType {
-  TTUnknown,
-  TTEof,
-  TTId,
-
-  // literals
-  TTLitInt,
-  TTLitString,
-  TTLitFloat,
-  TTLitBool,
-  TTLitArray,
-
-  // structural
-  TTLPar,
-  TTRPar,
-  TTLBrace,
-  TTRBrace,
-  TTSemi,
-  TTColon,
-  TTComma,
-  TTArrow,
-
-  // operators
-  TTDiv,
-  TTPlus,
-  TTMinus,
-  TTMod,
-  TTMult,
-  TTGreater,
-  TTGEq,
-  TTLess,
-  TTLEq,
-  TTEq,
-  TTAssign,
-  TTIncr,
-  TTDecr,
-  TTAdd,
-  TTSub,
-
-  // keywords
-  TTIf,
-  TTElse,
-  TTFor,
-  TTFunc,
-  TTWhile,
-  TTNext,
-  TTBreak,
-  TTInt,
-  TTString,
-  TTBool,
-  TTFloat,
-  TTAnd,
-  TTOr,
-  TTNot
-} TokenType;
-
 /*
  * Starts the lexer.
  *
@@ -111,27 +46,6 @@ void lexerStart(FILE* sourcefile, char* filename);
  *
  */
 void printFile(FILE* file);
-
-/*
- * Prints the line where the token is located and highlights the token. 
- *
- * file: pointer to the source file (should be open, will be rewinded and
- *   will not be closed).
- * token: the token to be printed.
- *
- */
-void printTokenInFile(FILE* file, Token token);
-
-/*
- * Prints the line where a character is located and highlights the character. 
- *
- * file: pointer to the source file (should be open, will be rewinded and
- *   will not be closed).
- * lnum: line number where the character appears.
- * chnum: column/position in the line where the character appears.
- *
- */
-void printCharInFile(FILE* file, int lnum, int chnum);
 
 /*
  * Prints an error message and exits the program with exit code 1. 
@@ -176,7 +90,7 @@ int isNum(char character);
  * returns: 1 if it is, 0 otherwise.
  *
  */
-int isSingleCharOp(char character);
+int isSingleCharToken(char character);
 
 /*
  * Checks whether a character could be the first in a 2-char operator, such
@@ -187,52 +101,6 @@ int isSingleCharOp(char character);
  *
  */
 int startsDoubleOp(char character);
-
-/*
- * Checks whether a token type is a literal type. 
- *
- * type: the token type to be checked.
- * returns: 1 if it is, 0 otherwise.
- *
- */
-int isLiteral(TokenType type);
-
-/*
- * Checks whether a token type is a (data) type type. 
- *
- * type: the token type to be checked.
- * returns: 1 if it is, 0 otherwise.
- *
- */
-int isType(TokenType type);
-
-/*
- * Checks whether a token type is a binary operator. 
- *
- * type: the token type to be checked.
- * returns: 1 if it is, 0 otherwise.
- *
- */
-int isBinaryOp(TokenType type);
-
-/*
- * Gets the precedence of an operator token type. 
- *
- * type: the token type to be checked.
- * returns: The operator precedence. Maximum precedence is 0, meaning that 
- *   such operations will be executed first. If not an operator, returns -1.
- *
- */
-int precedence(TokenType type);
-
-/*
- * Checks whether the token type signals the end of an expression. 
- *
- * type: the token type to be checked.
- * returns: 1 if it does, 0 otherwise.
- *
- */
-int isExprTerminator(TokenType type);
 
 #endif
 

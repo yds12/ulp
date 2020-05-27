@@ -27,7 +27,7 @@ int main(int argc, char ** argv) {
   }
 
   lexerStart(sourcefile, filename);
-  parserStart();
+  parserStart(sourcefile, filename, lexerState.nTokens, lexerState.tokens);
   fclose(sourcefile);
   return 0;
 }

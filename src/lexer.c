@@ -6,6 +6,7 @@
  */
 
 #include <string.h>
+#include "util.h"
 #include "lexer.h"
 
 /*
@@ -118,7 +119,7 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
     // and lexerState.chnum as the position (column) of buffer[0]
     if(ch == '/') eatSlash();
     else if(ch == '"') eatDQuote();
-    else if(isSingleCharOp(ch)) eatSingleSymb();
+    else if(isSingleCharToken(ch)) eatSingleSymb();
     else if(startsDoubleOp(ch)) eatDoubleSymb();
     else if(isAlpha(ch) || ch == '_') eatIDKW();
     else if(isNum(ch)) eatNumber();

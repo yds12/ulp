@@ -1,6 +1,5 @@
 #include <stdio.h>
 #include <string.h>
-#include "lexer.h"
 #include "parser.h"
 #include "ast.h"
 
@@ -20,16 +19,18 @@ void singleParent(NodeType type);
 // Checks whether a certain type can come before a statement
 int canPrecedeStatement(Node* node);
 
-void parserStart() {
+void parserStart(FILE* file, char* filename, int nTokens, Token* tokens) {
   parserState = (ParserState) { 
-    .file = lexerState.file, 
-    .filename = lexerState.filename,
-    .nextToken = 0
+    .file = file, 
+    .filename = filename,
+    .nextToken = 0,
+    .nTokens = nTokens,
+    .tokens = tokens
   };
 
   initializeStack();
 
-  while(parserState.nextToken < lexerState.nTokens) {
+  while(parserState.nextToken < parserState.nTokens) {
     shift();
     int success = 0;
 
@@ -44,7 +45,7 @@ void parserStart() {
 }
 
 void shift() {
-  Token* token = &lexerState.tokens[parserState.nextToken];
+  Token* token = &parserState.tokens[parserState.nextToken];
   parserState.nextToken++;
 
   Node node = { 

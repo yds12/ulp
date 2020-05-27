@@ -6,44 +6,8 @@
 #ifndef PARSER_H
 #define PARSER_H
 
-#include "lexer.h"
-
-// A node type name cannot exceed this length
-#define MAX_NODE_NAME 40
-
-typedef enum stNodeType {
-  NTProgram,
-  NTProgramPart,
-  NTStatement,
-  NTFunction,
-  NTDeclaration,
-  NTBreakSt,
-  NTNextSt,
-  NTIfSt,
-  NTLoopSt,
-  NTWhileSt,
-  NTMatchSt,
-  NTCallSt,
-  NTAssignment,
-  NTCallParam,
-  NTParam,
-  NTNoop,
-  NTExpression,
-  NTTerm,
-  NTType,
-  NTLiteral,
-  NTBinaryOp,
-  NTIdentifier,
-  NTTerminal,
-} NodeType;
-
-typedef struct stNode {
-  NodeType type;
-  Token* token;
-  struct stNode** children;
-  int nChildren;
-  int id;
-} Node;
+#include <stdio.h>
+#include "datast.h"
 
 typedef struct stParserStack {
   Node** nodes;
@@ -55,6 +19,8 @@ typedef struct stParserState {
   FILE* file;
   char* filename;
   int nextToken;
+  int nTokens;  // from lexerState
+  Token* tokens;  // from lexerState
 } ParserState;
 
 // Global state of the parser
@@ -89,10 +55,6 @@ void allocChildren(Node* node, int nChildren);
 Token lookAhead();
 
 int isSubStatement(NodeType type);
-
-void strReplaceNodeName(char* str, char* format, Node* node);
-
-void strReplaceNodeAbbrev(char* str, char* format, Node* node);
 
 void parsError(char* msg, int lnum, int chnum);
 
