@@ -18,7 +18,7 @@ STATEMENT := { STATEMENT* }
            | return EXPR ;
            | loop STATEMENT
            | while EXPR : STATEMENT
-           | for DECLARATION* , EXPR , STATEMENT : STATEMENT
+           | for FOR_DECLARATION , EXPR , FOR_ASSIGNMENT : STATEMENT
            | match EXPR { MATCH_CLAUSES }
            | break ;
            | next ;
@@ -27,13 +27,20 @@ FUNCTION := fn IDENTIFIER [PARAMS] => STATEMENT
 
 DECLARATION := TYPE IDENTIFIER [= EXPR] ;
 
+FOR_DECLARATION := TYPE IDENTIFIER = EXPR
+
 ASSIGNMENT := IDENTIFIER = EXPR ;
             | IDENTIFIER INC_DEC ;
             | IDENTIFIER ASSIGN_OP EXPR ;
 
+FOR_ASSIGNMENT := IDENTIFIER = EXPR
+                | IDENTIFIER INC_DEC
+                | IDENTIFIER ASSIGN_OP EXPR
+
 EXPR := TERM
       | EXPR OP EXPR
       | not EXPR
+      | - EXPR
       | ( EXPR )
 
 MATCH_CLAUSES := EXPR : STATEMENT [MATCH_CLAUSES]

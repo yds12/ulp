@@ -75,7 +75,10 @@ typedef enum enTokenType {
   TTFloat,
   TTAnd,
   TTOr,
-  TTNot
+  TTNot,
+  TTReturn,
+  TTLoop,
+  TTMatch
 } TokenType;
 
 typedef enum stNodeType {
@@ -91,7 +94,10 @@ typedef enum stNodeType {
   NTWhileSt,
   NTMatchSt,
   NTCallSt,
+  NTReturnSt,
+  NTForSt,
   NTAssignment,
+  NTMatchClause,
   NTExpression,
   NTCallExpr,
   NTCallParam,

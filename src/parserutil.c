@@ -87,8 +87,13 @@ void allocChildren(Node* node, int nChildren) {
 int isSubStatement(NodeType type) {
   if(type == NTBreakSt || type == NTNextSt || type == NTIfSt ||
      type == NTLoopSt || type == NTWhileSt || type == NTNoop ||
-     type == NTMatchSt || type == NTAssignment)
+     type == NTMatchSt || type == NTAssignment || type == NTCallSt)
     return 1;
+  return 0;
+}
+
+int isAssignmentOp(TokenType type) {
+  if(type == TTAssign || type == TTAdd || type == TTSub) return 1;
   return 0;
 }
 
