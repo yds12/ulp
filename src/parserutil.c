@@ -28,14 +28,20 @@ void initializeStack() {
   pStack.nodes = (Node**) malloc(INITIAL_STACK_SIZE * sizeof(Node*));
 }
 
-Node* createAndPush(Node node, int nChildren) {
-  Node* nodePtr = newNode(node);
+Node* createAndPush(NodeType type, int nChildren) {
+  Node* nodePtr = newNode(type);
   if(nChildren > 0) allocChildren(nodePtr, nChildren);
   stackPush(nodePtr);
   return nodePtr;
 }
 
-Node* newNode(Node node) {
+Node* newNode(NodeType type) {
+  Node node = { 
+    .type = type, 
+    .token = NULL, 
+    .children = NULL
+  };
+
   if(nodeCount >= maxNodes) {
     pNodes = (Node*) realloc(pNodes, sizeof(Node) * maxNodes * 2);
     maxNodes *= 2;

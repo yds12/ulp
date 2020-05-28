@@ -53,14 +53,8 @@ void parserStart(FILE* file, char* filename, int nTokens, Token* tokens) {
 void shift() {
   Token* token = &parserState.tokens[parserState.nextToken];
   parserState.nextToken++;
-
-  Node node = { 
-    .type = NTTerminal, 
-    .token = token, 
-    .children = NULL,
-    .nChildren = 0
-  };
-  createAndPush(node, 0);
+  Node* createdNode = createAndPush(NTTerminal, 0);
+  createdNode->token = token;
 }
 
 int reduce() {
@@ -104,12 +98,7 @@ int reduce() {
           // with else clause -- do nothing now
         } else { // without else
           stackPop(4);
-          Node node = { 
-            .type = NTIfSt, 
-            .token = NULL, 
-            .children = NULL // set in createAndPush()
-          };
-          Node* nodePtr = createAndPush(node, 2);
+          Node* nodePtr = createAndPush(NTIfSt, 2);
           nodePtr->children[0] = condNode;
           nodePtr->children[1] = curNode;
           reduced = 1;
@@ -141,12 +130,7 @@ int reduce() {
       }
 
       stackPop(6);
-      Node node = { 
-        .type = NTIfSt, 
-        .token = NULL, 
-        .children = NULL // set in createAndPush()
-      };
-      Node* nodePtr = createAndPush(node, 3);
+      Node* nodePtr = createAndPush(NTIfSt, 3);
       nodePtr->children[0] = condNode;
       nodePtr->children[1] = thenNode;
       nodePtr->children[2] = curNode;
@@ -239,12 +223,7 @@ int reduceRPar() {
        prevPrevNode->token->type == TTLPar) {
       // (EXPR) -- reduce
       stackPop(3);
-      Node node = { 
-        .type = NTExpression, 
-        .token = NULL, 
-        .children = NULL
-      };
-      Node* nodePtr = createAndPush(node, 1);
+      Node* nodePtr = createAndPush(NTExpression, 1);
       nodePtr->children[0] = prevNode; // parentheses are ignored
       reduced = 1;
     }
@@ -278,12 +257,7 @@ int reduceFunctionCall() {
       }
     }
 
-    Node node = { 
-      .type = NTCallExpr, 
-      .token = NULL, 
-      .children = NULL
-    };
-    Node* nodePtr = newNode(node);
+    Node* nodePtr = newNode(NTCallExpr);
     allocChildren(nodePtr, nParams + 1);
     nodePtr->children[0] = idNode;
 
@@ -298,12 +272,7 @@ int reduceFunctionCall() {
     Node* idNode = pStack.nodes[pStack.pointer - 2];
 
     stackPop(3);
-    Node node = { 
-      .type = NTCallExpr, 
-      .token = NULL, 
-      .children = NULL
-    };
-    Node* nodePtr = createAndPush(node, 1);
+    Node* nodePtr = createAndPush(NTCallExpr, 1);
     nodePtr->children[0] = idNode; // parentheses are ignored
     reduced = 1;
   }
@@ -332,12 +301,7 @@ int reduceIdentifier() {
         // variable declaration, will reduce later
       } else { // is parameter
         stackPop(2);
-        Node node = { 
-          .type = NTParam, 
-          .token = NULL, 
-          .children = NULL 
-        };
-        Node* nodePtr = createAndPush(node, 2);
+        Node* nodePtr = createAndPush(NTParam, 2);
         nodePtr->children[0] = prevNode;
         nodePtr->children[1] = curNode;
         reduced = 1;
@@ -414,12 +378,7 @@ int reduceExpression() {
           prevPrevNode, astLastLeaf(prevPrevNode));
       } else { // EXPR OP EXPR TERMINATOR sequence, EXPR OP EXPR => EXPR
         stackPop(3);
-        Node node = { 
-          .type = NTExpression, 
-          .token = NULL, 
-          .children = NULL // set in createAndPush()
-        };
-        Node* nodePtr = createAndPush(node, 3);
+        Node* nodePtr = createAndPush(NTExpression, 3);
         nodePtr->children[0] = prevPrevNode;
         nodePtr->children[1] = prevNode;
         nodePtr->children[2] = curNode;
@@ -437,12 +396,7 @@ int reduceExpression() {
         // EXPR OP EXPR OP sequence, reduce if the previous has precedence
         // (<= value for precedence()), otherwise do nothing
         stackPop(3);
-        Node node = { 
-          .type = NTExpression, 
-          .token = NULL, 
-          .children = NULL // set in createAndPush()
-        };
-        Node* nodePtr = createAndPush(node, 3);
+        Node* nodePtr = createAndPush(NTExpression, 3);
         nodePtr->children[0] = prevPrevNode;
         nodePtr->children[1] = prevNode;
         nodePtr->children[2] = curNode;
@@ -479,12 +433,7 @@ int reduceSemi() {
       if(ttype == TTNext) nType = NTNextSt;
 
       stackPop(2);
-      Node node = { 
-        .type = nType, 
-        .token = NULL, 
-        .children = NULL 
-      };
-      Node* nodePtr = createAndPush(node, 2);
+      Node* nodePtr = createAndPush(nType, 2);
       nodePtr->children[0] = prevNode;
       nodePtr->children[1] = curNode;
       reduced = 1;
@@ -510,24 +459,14 @@ int reduceSemi() {
         } else if(prev4->type == NTProgramPart || prev4->type == NTStatement) {
           // ID = EXPR ;  -- assignment
           stackPop(4);
-          Node node = { 
-            .type = NTAssignment, 
-            .token = NULL, 
-            .children = NULL // set in createAndPush()
-          };
-          Node* nodePtr = createAndPush(node, 2);
+          Node* nodePtr = createAndPush(NTAssignment, 2);
           nodePtr->children[0] = prev3; // ID
           nodePtr->children[1] = prevNode; // EXPR
           reduced = 1;
         } else if(prev4->type == NTType) { // declaration w/ assignment
           // TYPE ID = EXPR ;  -- declaration with assignment
           stackPop(5);
-          Node node = { 
-            .type = NTDeclaration, 
-            .token = NULL, 
-            .children = NULL // set in createAndPush()
-          };
-          Node* nodePtr = createAndPush(node, 3);
+          Node* nodePtr = createAndPush(NTDeclaration, 3);
           nodePtr->children[0] = prev4; // TYPE
           nodePtr->children[1] = prev3; // ID
           nodePtr->children[2] = prevNode; // EXPR
@@ -552,12 +491,7 @@ void reduceRoot() {
     }
   }
 
-  Node node = { 
-    .type = NTProgram, 
-    .token = NULL, 
-    .children = NULL 
-  };
-  Node* nodePtr = newNode(node);
+  Node* nodePtr = newNode(NTProgram);
   allocChildren(nodePtr, pStack.pointer + 1);
 
   for(int i = 0; i <= pStack.pointer; i++) {
@@ -571,13 +505,7 @@ void reduceRoot() {
 void singleParent(NodeType type) {
   Node* curNode = pStack.nodes[pStack.pointer];
   stackPop(1);
-
-  Node node = { 
-    .type = type, 
-    .token = NULL, 
-    .children = NULL 
-  };
-  Node* nodePtr = createAndPush(node, 1);
+  Node* nodePtr = createAndPush(type, 1);
   nodePtr->children[0] = curNode;
 }
 

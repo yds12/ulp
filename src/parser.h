@@ -42,9 +42,9 @@ void parserStart();
 
 void initializeStack();
 
-Node* newNode(Node node);
+Node* newNode(NodeType type);
 
-Node* createAndPush(Node node, int nChildren);
+Node* createAndPush(NodeType type, int nChildren);
 
 void stackPush(Node* node);
 
