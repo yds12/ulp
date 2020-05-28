@@ -9,6 +9,7 @@ void shift();
 int reduce();
 int reduceSemi();
 int reduceExpression();
+int reduceStatement();
 int reduceRPar();
 int reduceFunctionCall();
 int reduceIdentifier();
@@ -70,73 +71,7 @@ int reduce() {
       reduced = 1;
     }
   } else if(curNode->type == NTStatement) { // UNFINISHED
-
-    if(!prevNode || prevNode->type == NTProgramPart) {
-      // we have a finished statement and the previous statement is already
-      // reduced.
-      singleParent(NTProgramPart);
-      reduced = 1;
-    } else if(!canPrecedeStatement(prevNode)) {
-      // build error string
-      parsErrorHelper("Unexpected %s before statement.",
-        prevNode, astLastLeaf(prevNode));
-    } else if(prevNode->type == NTTerminal &&
-              prevNode->token->type == TTColon) {
-      Node* ifNode = NULL;
-      if(pStack.pointer >= 3) ifNode = pStack.nodes[pStack.pointer - 3];
-
-      if(ifNode->type == NTTerminal && ifNode->token->type == TTIf) {
-        Node* condNode = pStack.nodes[pStack.pointer - 2];
-
-        if(condNode->type != NTExpression) { // error
-          parsErrorHelper("Unexpected %s as condition for 'if' statement.",
-            condNode, astFirstLeaf(condNode));
-        }
-
-        // if statement
-        if(lookAhead().type == TTElse) { 
-          // with else clause -- do nothing now
-        } else { // without else
-          stackPop(4);
-          Node* nodePtr = createAndPush(NTIfSt, 2);
-          nodePtr->children[0] = condNode;
-          nodePtr->children[1] = curNode;
-          reduced = 1;
-        }
-      }
-    } else if(prevNode->type == NTTerminal && prevNode->token->type == TTElse) {
-      if(pStack.pointer < 5) { // error: incomplete if statement
-        Node* problematic = astFirstLeaf(prevNode);
-        parsError("Malformed 'if' statement.", problematic->token->lnum, 
-          problematic->token->chnum);
-      }
-
-      Node* thenNode = pStack.nodes[pStack.pointer - 2];
-      Node* condNode = pStack.nodes[pStack.pointer - 4];
-      Node* ifNode = pStack.nodes[pStack.pointer - 5];
-
-      if(thenNode->type != NTStatement) { // error: statement expected
-        parsErrorHelper("Bad 'if' statement: expected statement, found %s.",
-          thenNode, astFirstLeaf(thenNode));
-      }
-      if(condNode->type != NTExpression) { // error: expression expected
-        parsErrorHelper("Bad 'if' condition: expected expression, found %s.",
-          condNode, astFirstLeaf(condNode));
-      }
-      if(ifNode->type != NTTerminal || ifNode->token->type != TTIf) { 
-        // error: 'if' keyword expected
-        parsErrorHelper("Bad 'if' statement: expected 'if' keyword, found %s.",
-          ifNode, astFirstLeaf(ifNode));
-      }
-
-      stackPop(6);
-      Node* nodePtr = createAndPush(NTIfSt, 3);
-      nodePtr->children[0] = condNode;
-      nodePtr->children[1] = thenNode;
-      nodePtr->children[2] = curNode;
-      reduced = 1;
-    }
-
+    reduced = reduceStatement();
   } else if(curNode->type == NTFunction) { // DONE
     singleParent(NTProgramPart);
     reduced = 1;
@@ -195,6 +130,81 @@ int reduce() {
     } else if(ttype == TTSemi) {
       reduced = reduceSemi();
     }
+  }
+
+  return reduced;
+}
+
+int reduceStatement() {
+  int reduced = 0;
+  Node* curNode = pStack.nodes[pStack.pointer];
+  Node* prevNode = NULL;
+  if(pStack.pointer >= 1) prevNode = pStack.nodes[pStack.pointer - 1];
+
+  if(!prevNode || prevNode->type == NTProgramPart) {
+    // we have a finished statement and the previous statement is already
+    // reduced.
+    singleParent(NTProgramPart);
+    reduced = 1;
+  } else if(!canPrecedeStatement(prevNode)) {
+    // build error string
+    parsErrorHelper("Unexpected %s before statement.",
+      prevNode, astLastLeaf(prevNode));
+  } else if(prevNode->type == NTTerminal &&
+            prevNode->token->type == TTColon) {
+    Node* ifNode = NULL;
+    if(pStack.pointer >= 3) ifNode = pStack.nodes[pStack.pointer - 3];
+
+    if(ifNode->type == NTTerminal && ifNode->token->type == TTIf) {
+      Node* condNode = pStack.nodes[pStack.pointer - 2];
+
+      if(condNode->type != NTExpression) { // error
+        parsErrorHelper("Unexpected %s as condition for 'if' statement.",
+          condNode, astFirstLeaf(condNode));
+      }
+
+      // if statement
+      if(lookAhead().type == TTElse) { 
+        // with else clause -- do nothing now
+      } else { // without else
+        stackPop(4);
+        Node* nodePtr = createAndPush(NTIfSt, 2);
+        nodePtr->children[0] = condNode;
+        nodePtr->children[1] = curNode;
+        reduced = 1;
+      }
+    }
+  } else if(prevNode->type == NTTerminal && prevNode->token->type == TTElse) {
+    if(pStack.pointer < 5) { // error: incomplete if statement
+      Node* problematic = astFirstLeaf(prevNode);
+      parsError("Malformed 'if' statement.", problematic->token->lnum, 
+        problematic->token->chnum);
+    }
+
+    Node* thenNode = pStack.nodes[pStack.pointer - 2];
+    Node* condNode = pStack.nodes[pStack.pointer - 4];
+    Node* ifNode = pStack.nodes[pStack.pointer - 5];
+
+    if(thenNode->type != NTStatement) { // error: statement expected
+      parsErrorHelper("Bad 'if' statement: expected statement, found %s.",
+        thenNode, astFirstLeaf(thenNode));
+    }
+    if(condNode->type != NTExpression) { // error: expression expected
+      parsErrorHelper("Bad 'if' condition: expected expression, found %s.",
+        condNode, astFirstLeaf(condNode));
+    }
+    if(ifNode->type != NTTerminal || ifNode->token->type != TTIf) { 
+      // error: 'if' keyword expected
+      parsErrorHelper("Bad 'if' statement: expected 'if' keyword, found %s.",
+        ifNode, astFirstLeaf(ifNode));
+    }
+
+    stackPop(6);
+    Node* nodePtr = createAndPush(NTIfSt, 3);
+    nodePtr->children[0] = condNode;
+    nodePtr->children[1] = thenNode;
+    nodePtr->children[2] = curNode;
+    reduced = 1;
   }
 
   return reduced;
