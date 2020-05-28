@@ -120,7 +120,7 @@ void printCharInFile(FILE* file, char* filename, int lnum, int chnum) {
   printf("%s\n", buff_mark);
 }
 
-void strReplaceNodeName(char* str, char* format, Node* node) {
+void strReplaceNodeAndTokenName(char* str, char* format, Node* node) {
   NodeType type = node->type;
 
   if(type == NTTerminal) {
@@ -128,8 +128,71 @@ void strReplaceNodeName(char* str, char* format, Node* node) {
     char* strTokenFormat = "token '%s'";
     sprintf(strToken, strTokenFormat, node->token->name);
     sprintf(str, format, strToken);
-  } 
-  else switch(type) {
+  } else strReplaceNodeName(str, format, type); 
+}
+
+void strReplaceTokenName(char* str, char* format, TokenType ttype) {
+  switch(ttype) {
+    case TTId: sprintf(str, format, "identifier"); break;
+
+    // literals
+    case TTLitInt: sprintf(str, format, "integer literal"); break;
+    case TTLitFloat: sprintf(str, format, "float literal"); break;
+    case TTLitString: sprintf(str, format, "string literal"); break;
+    case TTLitBool: sprintf(str, format, "boolean literal"); break;
+    case TTLitArray: sprintf(str, format, "array literal"); break;
+
+    // structural
+    case TTLPar: sprintf(str, format, "token '('"); break;
+    case TTRPar: sprintf(str, format, "token ')'"); break;
+    case TTLBrace: sprintf(str, format, "token '{'"); break;
+    case TTRBrace: sprintf(str, format, "token '}'"); break;
+    case TTSemi: sprintf(str, format, "token ';'"); break;
+    case TTColon: sprintf(str, format, "token ':'"); break;
+    case TTComma: sprintf(str, format, "token ','"); break;
+    case TTArrow: sprintf(str, format, "token '=>'"); break;
+
+    // operators
+    case TTDiv: sprintf(str, format, "operator '/'"); break;
+    case TTPlus: sprintf(str, format, "operator '+'"); break;
+    case TTMinus: sprintf(str, format, "operator '-'"); break;
+    case TTMod: sprintf(str, format, "operator '%'"); break;
+    case TTMult: sprintf(str, format, "operator '*'"); break;
+    case TTGreater: sprintf(str, format, "operator '>'"); break;
+    case TTGEq: sprintf(str, format, "operator '>='"); break;
+    case TTLess: sprintf(str, format, "operator '<'"); break;
+    case TTLEq: sprintf(str, format, "operator '<='"); break;
+    case TTEq: sprintf(str, format, "operator '=='"); break;
+    case TTAssign: sprintf(str, format, "operator '='"); break;
+    case TTIncr: sprintf(str, format, "operator '++'"); break;
+    case TTDecr: sprintf(str, format, "operator '--'"); break;
+    case TTAdd: sprintf(str, format, "operator '+='"); break;
+    case TTSub: sprintf(str, format, "operator '-='"); break;
+
+    // keywords
+    case TTIf: sprintf(str, format, "keyword 'if'"); break;
+    case TTElse: sprintf(str, format, "keyword 'else'"); break;
+    case TTFor: sprintf(str, format, "keyword 'for'"); break;
+    case TTFunc: sprintf(str, format, "keyword 'fn'"); break;
+    case TTWhile: sprintf(str, format, "keyword 'while'"); break;
+    case TTNot: sprintf(str, format, "keyword 'not'"); break;
+    case TTNext: sprintf(str, format, "keyword 'next'"); break;
+    case TTBreak: sprintf(str, format, "keyword 'break'"); break;
+    case TTInt: sprintf(str, format, "keyword 'int'"); break;
+    case TTString: sprintf(str, format, "keyword 'string'"); break;
+    case TTBool: sprintf(str, format, "keyword 'bool'"); break;
+    case TTFloat: sprintf(str, format, "keyword 'float'"); break;
+    case TTAnd: sprintf(str, format, "keyword 'and'"); break;
+    case TTOr: sprintf(str, format, "keyword 'or'"); break;
+    case TTReturn: sprintf(str, format, "keyword 'return'"); break;;
+    case TTLoop: sprintf(str, format, "keyword 'loop'"); break;
+    case TTMatch: sprintf(str, format, "keyword 'match'"); break;
+    default: sprintf(str, format, "other token");
+  }
+}
+
+void strReplaceNodeName(char* str, char* format, NodeType type) {
+  switch(type) {
     case NTBreakSt: sprintf(str, format, "'break' statement");
       break;
     case NTNextSt: sprintf(str, format, "'next' statement");

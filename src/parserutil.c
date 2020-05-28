@@ -11,6 +11,7 @@
 #include <string.h>
 #include "util.h"
 #include "parser.h"
+#include "ast.h"
 
 #define INITIAL_STACK_SIZE 100
 #define INITIAL_MAX_NODES 250
@@ -87,7 +88,8 @@ void allocChildren(Node* node, int nChildren) {
 int isSubStatement(NodeType type) {
   if(type == NTBreakSt || type == NTNextSt || type == NTIfSt ||
      type == NTLoopSt || type == NTWhileSt || type == NTNoop ||
-     type == NTMatchSt || type == NTAssignment || type == NTCallSt)
+     type == NTMatchSt || type == NTAssignment || type == NTCallSt ||
+     type == NTForSt)
     return 1;
   return 0;
 }
@@ -97,10 +99,51 @@ int isAssignmentOp(TokenType type) {
   return 0;
 }
 
+void assertTokenEqual(Node* node, TokenType ttype) {
+  if(node->type != NTTerminal) {
+    parsErrorHelper("Expected symbol, found %s.",
+      node, astFirstLeaf(node));
+  } else if(!(node->token)) {
+    Node* problematic = astFirstLeaf(node);
+    printf("Compiler bug: invalid terminal node.\n");
+    exit(1);
+  } else if(node->token->type != ttype) {
+    char* format = "%s";
+    char strWrong[MAX_NODE_NAME];
+    char strExpect[MAX_NODE_NAME];
+    strReplaceTokenName(strWrong, format, node->token->type);
+    strReplaceTokenName(strExpect, format, ttype);
+    char* msgFormat = "Expected %s, found %s.";
+    char finalString[strlen(msgFormat) + MAX_NODE_NAME * 2]; 
+    sprintf(finalString, msgFormat, strExpect, strWrong);
+
+    Node* problematic = astFirstLeaf(node);
+    parsError(finalString, problematic->token->lnum, 
+      problematic->token->chnum);
+  }
+}
+
+void assertEqual(Node* node, NodeType type) {
+  if(node->type != type) {
+    char* format = "%s";
+    char strWrong[MAX_NODE_NAME];
+    char strExpect[MAX_NODE_NAME];
+    strReplaceNodeAndTokenName(strWrong, format, node);
+    strReplaceNodeName(strExpect, format, type);
+    char* msgFormat = "Expected %s, found %s.";
+    char finalString[strlen(msgFormat) + MAX_NODE_NAME * 2]; 
+    sprintf(finalString, msgFormat, strExpect, strWrong);
+
+    Node* problematic = astFirstLeaf(node);
+    parsError(finalString, problematic->token->lnum, 
+      problematic->token->chnum);
+  }
+}
+
 void parsErrorHelper(char* format, Node* node, Node* leafNode) {
   int len = strlen(format) + MAX_NODE_NAME;
   char str[len];
-  strReplaceNodeName(str, format, node); 
+  strReplaceNodeAndTokenName(str, format, node); 
   parsError(str, leafNode->token->lnum, leafNode->token->chnum);
 }
 

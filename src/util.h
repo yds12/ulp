@@ -85,7 +85,11 @@ int precedence(TokenType type);
  */
 int isExprTerminator(TokenType type);
 
-void strReplaceNodeName(char* str, char* format, Node* node);
+void strReplaceTokenName(char* str, char* format, TokenType ttype);
+
+void strReplaceNodeName(char* str, char* format, NodeType type);
+
+void strReplaceNodeAndTokenName(char* str, char* format, Node* node);
 
 void strReplaceNodeAbbrev(char* str, char* format, Node* node);
 

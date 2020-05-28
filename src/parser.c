@@ -41,7 +41,7 @@ void parserStart(FILE* file, char* filename, int nTokens, Token* tokens) {
     do {
 
 #ifdef DEBUG
-printStack();  
+//printStack();  
 #endif
 
       success = reduce(); 
@@ -78,9 +78,14 @@ int reduce() {
     singleParent(NTProgramPart);
     reduced = 1;
   } else if(curNode->type == NTDeclaration) { // DONE
-    if(!prevNode || prevNode->type == NTStatement
-       || prevNode->type == NTProgramPart) { // independent declaration
+    if(!prevNode || prevNode->type == NTProgramPart) {
+      // independent declaration
       singleParent(NTProgramPart);
+      reduced = 1;
+    } else if(prevNode->type == NTStatement || (prevNode->type == NTTerminal
+       && prevNode->token->type == TTLBrace)) {
+      // independent declaration in block
+      singleParent(NTStatement);
       reduced = 1;
     } else { // declaration part of FOR statement -- do nothing
     }
@@ -257,7 +262,6 @@ int reduceStatement() {
           problematic->token->lnum, problematic->token->chnum);
       }
 
-      // TODO Create assert functions to simplify this
       Node* forNode = pStack.nodes[pStack.pointer - 7];
       Node* declNode = pStack.nodes[pStack.pointer - 6];
       Node* comma1 = pStack.nodes[pStack.pointer - 5];
@@ -265,7 +269,14 @@ int reduceStatement() {
       Node* comma2 = pStack.nodes[pStack.pointer - 3];
       Node* assignNode = pStack.nodes[pStack.pointer - 2];
 
-      if(forNode->type != NTTerminal || forNode->token->type != TTFor) {
+      assertTokenEqual(forNode, TTFor);
+      assertEqual(declNode, NTDeclaration);
+      assertTokenEqual(comma1, TTComma);
+      assertEqual(exprNode, NTExpression);
+      assertTokenEqual(comma2, TTComma);
+      assertEqual(assignNode, NTStatement);
+
+/*      if(forNode->type != NTTerminal || forNode->token->type != TTFor) {
         parsErrorHelper("Expected 'for' keyword, found %s.", 
           forNode, astFirstLeaf(forNode));
       }
@@ -290,7 +301,7 @@ int reduceStatement() {
         parsErrorHelper(
           "Assignment statement expected after 'for' condition, found %s.", 
           assignNode, astFirstLeaf(assignNode));
-      }
+      }*/
 
       stackPop(8);
       Node* nodePtr = createAndPush(NTForSt, 4);
@@ -359,8 +370,7 @@ int reduceRPar() {
        prevPrevNode->token->type == TTLPar) {
       // (EXPR) -- reduce
       stackPop(3);
-      Node* nodePtr = createAndPush(NTExpression, 1);
-      nodePtr->children[0] = prevNode; // parentheses are ignored
+      stackPush(prevNode);
       reduced = 1;
     }
   } else if(prevNode->type == NTCallParam ||
