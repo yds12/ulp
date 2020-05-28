@@ -86,6 +86,13 @@ int isSubStatement(NodeType type) {
   return 0;
 }
 
+void parsErrorHelper(char* format, Node* node, Node* leafNode) {
+  int len = strlen(format) + MAX_NODE_NAME;
+  char str[len];
+  strReplaceNodeName(str, format, node); 
+  parsError(str, leafNode->token->lnum, leafNode->token->chnum);
+}
+
 void parsError(char* msg, int lnum, int chnum) {
   if(lnum > 0) {
     printf("\nSyntax " ERROR_COLOR_START "ERROR" COLOR_END ": %s\n", msg);

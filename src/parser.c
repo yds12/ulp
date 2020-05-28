@@ -84,13 +84,8 @@ int reduce() {
       reduced = 1;
     } else if(!canPrecedeStatement(prevNode)) {
       // build error string
-      char* format = "Unexpected %s before statement.";
-      int len = strlen(format) + MAX_NODE_NAME;
-      char str[len];
-      strReplaceNodeName(str, format, prevNode); 
-
-      Node* problematic = astLastLeaf(prevNode);
-      parsError(str, problematic->token->lnum, problematic->token->chnum);
+      parsErrorHelper("Unexpected %s before statement.",
+        prevNode, astLastLeaf(prevNode));
     } else if(prevNode->type == NTTerminal &&
               prevNode->token->type == TTColon) {
       Node* ifNode = NULL;
@@ -100,13 +95,8 @@ int reduce() {
         Node* condNode = pStack.nodes[pStack.pointer - 2];
 
         if(condNode->type != NTExpression) { // error
-          char* format = "Unexpected %s as condition for 'if' statement.";
-          int len = strlen(format) + MAX_NODE_NAME;
-          char str[len];
-          strReplaceNodeName(str, format, condNode); 
-
-          Node* problematic = astFirstLeaf(condNode);
-          parsError(str, problematic->token->lnum, problematic->token->chnum);
+          parsErrorHelper("Unexpected %s as condition for 'if' statement.",
+            condNode, astFirstLeaf(condNode));
         }
 
         // if statement
@@ -137,35 +127,17 @@ int reduce() {
       Node* ifNode = pStack.nodes[pStack.pointer - 5];
 
       if(thenNode->type != NTStatement) { // error: statement expected
-        char* format = 
-          "Bad 'if' statement: expected statement, found %s.";
-        int len = strlen(format) + MAX_NODE_NAME;
-        char str[len];
-        strReplaceNodeName(str, format, thenNode); 
-
-        Node* problematic = astFirstLeaf(thenNode);
-        parsError(str, problematic->token->lnum, problematic->token->chnum);
+        parsErrorHelper("Bad 'if' statement: expected statement, found %s.",
+          thenNode, astFirstLeaf(thenNode));
       }
       if(condNode->type != NTExpression) { // error: expression expected
-        char* format = 
-          "Bad 'if' condition: expected expression, found %s.";
-        int len = strlen(format) + MAX_NODE_NAME;
-        char str[len];
-        strReplaceNodeName(str, format, condNode); 
-
-        Node* problematic = astFirstLeaf(condNode);
-        parsError(str, problematic->token->lnum, problematic->token->chnum);
+        parsErrorHelper("Bad 'if' condition: expected expression, found %s.",
+          condNode, astFirstLeaf(condNode));
       }
       if(ifNode->type != NTTerminal || ifNode->token->type != TTIf) { 
         // error: 'if' keyword expected
-        char* format = 
-          "Bad 'if' statement: expected 'if' keyword, found %s.";
-        int len = strlen(format) + MAX_NODE_NAME;
-        char str[len];
-        strReplaceNodeName(str, format, ifNode); 
-
-        Node* problematic = astFirstLeaf(ifNode);
-        parsError(str, problematic->token->lnum, problematic->token->chnum);
+        parsErrorHelper("Bad 'if' statement: expected 'if' keyword, found %s.",
+          ifNode, astFirstLeaf(ifNode));
       }
 
       stackPop(6);
@@ -258,13 +230,8 @@ int reduceRPar() {
       problematic->token->lnum, problematic->token->chnum);
   }
   if(prevNode->type == NTProgramPart || prevNode->type == NTStatement) {
-    char* format = "Unexpected ')' after %s.";
-    int len = strlen(format) + MAX_NODE_NAME;
-    char str[len];
-    strReplaceNodeName(str, format, prevNode); 
-
-    Node* problematic = astLastLeaf(prevNode);
-    parsError(str, problematic->token->lnum, problematic->token->chnum);
+    parsErrorHelper("Unexpected ')' after %s.",
+      prevNode, astLastLeaf(prevNode));
   }
 
   if(prevNode->type == NTExpression) {
@@ -403,13 +370,8 @@ int reduceExpression() {
   }
   else if(prevNode->type == NTProgramPart || prevNode->type == NTStatement) {
     // Error: expression after complete statement
-    char* format = "Unexpected expression after %s.";
-    int len = strlen(format) + MAX_NODE_NAME;
-    char str[len];
-    strReplaceNodeName(str, format, prevNode); 
-
-    Node* problematic = astLastLeaf(prevNode);
-    parsError(str, problematic->token->lnum, problematic->token->chnum);
+    parsErrorHelper("Unexpected expression after %s.",
+      prevNode, astLastLeaf(prevNode));
   }
 
   if(prevNode->type == NTTerminal && prevNode->token->type == TTLPar) {
@@ -440,26 +402,16 @@ int reduceExpression() {
     } else if(prevPrevNode->type == NTDeclaration) { // for statement
       // do nothing
     } else { // unexpected node before: , EXPR
-      char* format = "Expected parameter or declaration, found %s.";
-      int len = strlen(format) + MAX_NODE_NAME;
-      char str[len];
-      strReplaceNodeName(str, format, prevPrevNode); 
-
-      Node* problematic = astFirstLeaf(prevPrevNode);
-      parsError(str, problematic->token->lnum, problematic->token->chnum);
+      parsErrorHelper("Expected parameter or declaration, found %s.",
+        prevPrevNode, astFirstLeaf(prevPrevNode));
     }
   }
   else if(isExprTerminator(laType)) {
     if(prevNode->type == NTBinaryOp) {
       if(prevPrevNode && prevPrevNode->type != NTExpression) {
         // If we see a OP EXPR sequence, there must be an EXPR before that 
-        char* format = "Expected expression before operator, found %s.";
-        int len = strlen(format) + MAX_NODE_NAME;
-        char str[len];
-        strReplaceNodeName(str, format, prevPrevNode); 
-
-        Node* problematic = astLastLeaf(prevPrevNode);
-        parsError(str, problematic->token->lnum, problematic->token->chnum);
+        parsErrorHelper("Expected expression before operator, found %s.",
+          prevPrevNode, astLastLeaf(prevPrevNode));
       } else { // EXPR OP EXPR TERMINATOR sequence, EXPR OP EXPR => EXPR
         stackPop(3);
         Node node = { 
@@ -478,13 +430,8 @@ int reduceExpression() {
     if(prevNode->type == NTBinaryOp) {
       if(prevPrevNode && prevPrevNode->type != NTExpression) {
         // If we see a OP EXPR sequence, there must be an EXPR before that 
-        char* format = "Expected expression before operator, found %s.";
-        int len = strlen(format) + MAX_NODE_NAME;
-        char str[len];
-        strReplaceNodeName(str, format, prevPrevNode); 
-
-        Node* problematic = astLastLeaf(prevPrevNode);
-        parsError(str, problematic->token->lnum, problematic->token->chnum);
+        parsErrorHelper("Expected expression before operator, found %s.",
+          prevPrevNode, astLastLeaf(prevPrevNode));
       } else if(precedence(laType) >= 
                 precedence(prevNode->children[0]->token->type)){ 
         // EXPR OP EXPR OP sequence, reduce if the previous has precedence
@@ -587,13 +534,8 @@ int reduceSemi() {
           reduced = 1;
         }
       } else { // error
-        char* format = "Assignment to %s.";
-        int len = strlen(format) + MAX_NODE_NAME;
-        char str[len];
-        strReplaceNodeName(str, format, prev3); 
-
-        Node* problematic = astFirstLeaf(prev3);
-        parsError(str, problematic->token->lnum, problematic->token->chnum);
+        parsErrorHelper("Assignment to %s.",
+          prev3, astFirstLeaf(prev3));
       }
     }
   }
@@ -605,13 +547,8 @@ void reduceRoot() {
   for(int i = 0; i <= pStack.pointer; i++) {
     if(pStack.nodes[i]->type != NTProgramPart) {
       // build error string
-      char* format = "Unexpected %s at program root level.";
-      int len = strlen(format) + MAX_NODE_NAME;
-      char str[len];
-      strReplaceNodeName(str, format, pStack.nodes[i]); 
-
-      Node* problematic = astFirstLeaf(pStack.nodes[i]);
-      parsError(str, problematic->token->lnum, problematic->token->chnum);
+      parsErrorHelper("Unexpected %s at program root level.",
+        pStack.nodes[i], astFirstLeaf(pStack.nodes[i]));
     }
   }
 

@@ -56,6 +56,8 @@ Token lookAhead();
 
 int isSubStatement(NodeType type);
 
+void parsErrorHelper(char* format, Node* node, Node* leafNode);
+
 void parsError(char* msg, int lnum, int chnum);
 
 void printStack();
