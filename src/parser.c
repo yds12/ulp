@@ -11,7 +11,9 @@ int reduceSemi();
 int reduceExpression();
 int reduceStatement();
 int reduceRPar();
-int reduceFunctionCall();
+int reduceRBrace();
+int reduceFunctionCallExpr();
+int reduceFunctionCallSt();
 int reduceIdentifier();
 void reduceRoot();
 
@@ -37,12 +39,12 @@ void parserStart(FILE* file, char* filename, int nTokens, Token* tokens) {
     int success = 0;
 
     do {
-      success = reduce(); 
 
 #ifdef DEBUG
-//printStack();  
+printStack();  
 #endif
 
+      success = reduce(); 
     } while(success);
   }
 
@@ -89,9 +91,12 @@ int reduce() {
     reduced = 1;
   } else if(curNode->type == NTExpression) { // UNFINISHED 
     reduced = reduceExpression();
+  } else if(curNode->type == NTCallSt) { // DONE
+    singleParent(NTStatement);
+    reduced = 1;
   } else if(curNode->type == NTCallExpr) { // DONE
     if(!prevNode || prevNode->type == NTStatement
-       || prevNode->type == NTProgramPart) { // call statement 
+       || prevNode->type == NTProgramPart) { // call statement (WRONG!)
       singleParent(NTStatement);
       reduced = 1;
     } else { // call expression 
@@ -129,9 +134,52 @@ int reduce() {
       reduced = reduceRPar();
     } else if(ttype == TTSemi) {
       reduced = reduceSemi();
+    } else if(ttype == TTRBrace) {
+      reduced = reduceRBrace();
     }
   }
 
+  return reduced;
+}
+
+int reduceRBrace() {
+  int reduced = 0;
+  Node* prevNode = NULL;
+
+  int isBlock = 1;
+  int lbraceIdx = 1;
+
+  while(1) {
+    if(pStack.pointer >= lbraceIdx)
+      prevNode = pStack.nodes[pStack.pointer - lbraceIdx];
+    else { // error
+      Node* problematic = astFirstLeaf(prevNode);
+      parsError("Malformed block of statements.", problematic->token->lnum, 
+        problematic->token->chnum);
+    }
+
+    if(prevNode->type != NTStatement) {
+      if(prevNode->type != NTTerminal || prevNode->token->type != TTLBrace) {
+        isBlock = 0;
+      }
+      break;
+    }
+    lbraceIdx++;
+  }
+
+  if(isBlock) { // block of statements
+    Node* nodePtr = newNode(NTStatement);
+    allocChildren(nodePtr, lbraceIdx - 1);
+
+    for(int i = 0; i < lbraceIdx - 1; i++)
+      nodePtr->children[i] = pStack.nodes[lbraceIdx + 1 + i];
+
+    stackPop(lbraceIdx + 1); 
+    stackPush(nodePtr);
+    reduced = 1;
+  } else { // match statement
+  }
+  
   return reduced;
 }
 
@@ -239,13 +287,67 @@ int reduceRPar() {
     }
   } else if(prevNode->type == NTCallParam ||
             (prevNode->type == NTTerminal && prevNode->token->type == TTLPar)) {
-    reduced = reduceFunctionCall();
+    reduced = reduceFunctionCallExpr();
   }
 
   return reduced;
 }
 
-int reduceFunctionCall() {
+int reduceFunctionCallSt() {
+  int reduced = 0;
+  Node* prevNode = NULL;
+  prevNode = pStack.nodes[pStack.pointer - 1];
+
+  if(prevNode->type == NTCallParam) { // at least one param
+    Node* idNode = prevNode;
+    int nParams = 1;
+    int idIndex = 1;
+
+    while(idNode->type != NTIdentifier) { // find the function name
+      idIndex++;
+
+      if(pStack.pointer >= idIndex) {
+        idNode = pStack.nodes[pStack.pointer - idIndex];
+      } else { // this should never happen (as param checks for this)
+        Node* problematic = astFirstLeaf(idNode);
+        parsError("Malformed function call statement.", 
+          problematic->token->lnum, problematic->token->chnum);
+      }
+
+      if(idNode->type == NTCallParam) {
+        nParams++;
+      } else if(idNode->type == NTIdentifier) {
+        break;
+      }
+    }
+
+    Node* nodePtr = newNode(NTCallSt);
+    allocChildren(nodePtr, nParams + 1);
+    nodePtr->children[0] = idNode;
+
+    for(int i = 1; i <= nParams; i++)
+      nodePtr->children[i] = pStack.nodes[idIndex + i * 2];
+
+    // we know there is at least one param
+    // ID PARAM [, PARAM] ;
+    stackPop(3 + (nParams - 1) * 2); 
+
+    stackPush(nodePtr);
+    reduced = 1;
+  } else if(prevNode->type == NTTerminal && prevNode->token->type == TTLPar) {
+    // ID();  -- function call statement without params
+    Node* idNode = pStack.nodes[pStack.pointer - 3];
+
+    stackPop(4);
+    Node* nodePtr = createAndPush(NTCallSt, 1);
+    nodePtr->children[0] = idNode; // parentheses are ignored
+    reduced = 1;
+  }
+
+  return reduced;
+}
+
+int reduceFunctionCallExpr() {
   int reduced = 0;
   Node* prevNode = NULL;
   prevNode = pStack.nodes[pStack.pointer - 1];
@@ -295,12 +397,18 @@ int reduceIdentifier() {
   Node* curNode = pStack.nodes[pStack.pointer];
   Node* prevNode = NULL;
   if(pStack.pointer >= 1) prevNode = pStack.nodes[pStack.pointer - 1];
-  TokenType ttype = lookAhead().type;
+  TokenType laType = lookAhead().type;
 
-  if(ttype == TTId || ttype == TTLPar || ttype == TTNot || isLiteral(ttype)) {
+  if(laType == TTId || laType == TTLPar || laType == TTNot 
+     || isLiteral(laType)) 
+  {
     // is function ID (will be reduced later)
   } else { // is variable
-    if(prevNode && prevNode->type == NTType) // in declaration
+    if(laType == TTIncr || laType == TTDecr || 
+       laType == TTAdd || laType == TTSub || laType == TTAssign) {
+      // assignment statements  -- do nothing
+    }
+    else if(prevNode && prevNode->type == NTType) // in declaration
     {
       Node* prevPrevNode = NULL;
       if(pStack.pointer >= 2) prevPrevNode = pStack.nodes[pStack.pointer - 2];
@@ -309,6 +417,9 @@ int reduceIdentifier() {
          prevPrevNode->type == NTStatement)
       {
         // variable declaration, will reduce later
+      } else if(prevPrevNode->type == NTTerminal &&
+                prevPrevNode->token->type == TTFor) { 
+        // is part of for statement  -- do nothing
       } else { // is parameter
         stackPop(2);
         Node* nodePtr = createAndPush(NTParam, 2);
@@ -380,6 +491,10 @@ int reduceExpression() {
         prevPrevNode, astFirstLeaf(prevPrevNode));
     }
   }
+  else if(prevNode->type == NTIdentifier) { // function call, parameter
+    singleParent(NTCallParam);
+    reduced = 1;
+  }
   else if(isExprTerminator(laType)) {
     if(prevNode->type == NTBinaryOp) {
       if(prevPrevNode && prevPrevNode->type != NTExpression) {
@@ -391,6 +506,34 @@ int reduceExpression() {
         Node* nodePtr = createAndPush(NTExpression, 3);
         nodePtr->children[0] = prevPrevNode;
         nodePtr->children[1] = prevNode;
+        nodePtr->children[2] = curNode;
+        reduced = 1;
+      }
+    } else if(laType == TTComma) { // check FOR statement
+      Node* forNode = NULL;
+      if(pStack.pointer >= 4) forNode = pStack.nodes[pStack.pointer - 4];
+
+      if(forNode && forNode->type == NTTerminal 
+         && forNode->token->type == TTFor) {
+        Node* typeNode = pStack.nodes[pStack.pointer - 3];
+        if(typeNode->type != NTType) { // error
+          parsErrorHelper("Expected type, found %s.",
+            typeNode, astFirstLeaf(typeNode));
+        }
+        if(prevPrevNode->type != NTIdentifier) { // error
+          parsErrorHelper("Expected identifier, found %s.",
+            prevPrevNode, astFirstLeaf(prevPrevNode));
+        }
+        if(prevNode->type != NTTerminal || 
+           prevNode->token->type != TTAssign) { // error
+          parsErrorHelper("Expected symbol '=', found %s.",
+            prevNode, astFirstLeaf(prevNode));
+        }
+
+        stackPop(4);
+        Node* nodePtr = createAndPush(NTDeclaration, 3);
+        nodePtr->children[0] = typeNode;
+        nodePtr->children[1] = prevPrevNode;
         nodePtr->children[2] = curNode;
         reduced = 1;
       }
@@ -435,7 +578,8 @@ int reduceSemi() {
   if(!prevNode || prevNode->type == NTProgramPart) {
     singleParent(NTNoop);
     reduced = 1;
-  } else if(prevNode->type == NTTerminal) {
+  } 
+  else if(prevNode->type == NTTerminal) {
     TokenType ttype = prevNode->token->type;
 
     if(ttype == TTBreak || ttype == TTNext) {
@@ -448,7 +592,8 @@ int reduceSemi() {
       nodePtr->children[1] = curNode;
       reduced = 1;
     }
-  } else if(prevNode->type == NTExpression) {
+  } 
+  else if(prevNode->type == NTExpression) {
     if(prevPrevNode && prevPrevNode->type == NTTerminal &&
        prevPrevNode->token->type == TTAssign) { 
       // assignment or declaration with assignment
@@ -487,6 +632,9 @@ int reduceSemi() {
           prev3, astFirstLeaf(prev3));
       }
     }
+  }
+  else if(prevNode->type == NTCallParam) { // function call statement
+    reduced = reduceFunctionCallSt();
   }
 
   return reduced;

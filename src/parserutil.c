@@ -120,6 +120,6 @@ void printStack() {
     else
       printf(" %d", node->type);
   }
-  printf(".\n");
+  printf("\n");
 }
 
