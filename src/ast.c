@@ -8,6 +8,7 @@
  */
 
 #include <string.h>
+#include "cli.h"
 #include "ast.h"
 
 void graphvizAstRec(Node* node);
@@ -34,6 +35,8 @@ Node* astLastLeaf(Node* ast) {
 }
 
 void graphvizAst(Node* ast) {
+  if(cli.outputType != OUT_GRAPHVIZ) return;
+
   printf("digraph G {\n");
   graphvizAstRec(ast);
   printf("}");

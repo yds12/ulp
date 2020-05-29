@@ -9,6 +9,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include "cli.h"
 #include "util.h"
 #include "parser.h"
 #include "ast.h"
@@ -105,7 +106,10 @@ void assertTokenEqual(Node* node, TokenType ttype) {
       node, astFirstLeaf(node));
   } else if(!(node->token)) {
     Node* problematic = astFirstLeaf(node);
-    printf("Compiler bug: invalid terminal node.\n");
+
+    if(cli.outputType <= OUT_DEFAULT) {
+      printf("Compiler bug: invalid terminal node.\n");
+    }
     exit(1);
   } else if(node->token->type != ttype) {
     char* format = "%s";
@@ -148,6 +152,8 @@ void parsErrorHelper(char* format, Node* node, Node* leafNode) {
 }
 
 void parsError(char* msg, int lnum, int chnum) {
+  if(cli.outputType > OUT_DEFAULT) exit(1);
+
   if(lnum > 0) {
     printf("\nSyntax " ERROR_COLOR_START "ERROR" COLOR_END ": %s\n", msg);
     printCharInFile(parserState.file, parserState.filename, lnum, chnum);
@@ -159,6 +165,8 @@ void parsError(char* msg, int lnum, int chnum) {
 }
 
 void printStack() {
+  if(cli.outputType > OUT_VERBOSE) return;
+
   printf("Stack: ");
   for(int i = 0; i <= pStack.pointer; i++) {
     Node* node = pStack.nodes[i];

@@ -3,11 +3,9 @@
  */
 
 #include <stdio.h>
+#include "cli.h"
 #include "lexer.h"
 #include "parser.h"
-
-// Version of the compiler.
-#define VERSION "0.0.4"
 
 /*
  * The main function should receive the source file (but it can be ommited
@@ -15,15 +13,17 @@
  *
  */
 int main(int argc, char ** argv) {
+  int filenameIdx = parseCLArgs(argc, argv);
+
   FILE* sourcefile;
   char* filename;
 
-  if(argc < 2) { // read from stdin
+  if(filenameIdx < 1) { // read from stdin
     sourcefile = stdin;
-    filename = "STDIN";
+    filename = "<stdin>";
   } else { // read specified file
-    sourcefile = fopen(argv[1], "rt");
-    filename = argv[1];
+    sourcefile = fopen(argv[filenameIdx], "rt");
+    filename = argv[filenameIdx];
   }
 
   lexerStart(sourcefile, filename);

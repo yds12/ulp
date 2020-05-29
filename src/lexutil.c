@@ -5,6 +5,7 @@
  *
  */
 
+#include "cli.h"
 #include "util.h"
 #include "lexer.h"
 
@@ -53,6 +54,8 @@ void printFile(FILE* file) {
 }
 
 void lexError(char* msg) {
+  if(cli.outputType > OUT_DEFAULT) exit(1);
+
   printf("Lexical ERROR: %s\n%s: line: %d, column: %d.\n", msg, 
     lexerState.filename, lexerState.lnum, lexerState.chnum);
   printCharInFile(lexerState.file, lexerState.filename,
