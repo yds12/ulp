@@ -190,7 +190,7 @@ int reduceRBrace() {
     allocChildren(nodePtr, lbraceIdx - 1);
 
     for(int i = 0; i < lbraceIdx - 1; i++)
-      nodePtr->children[i] = pStack.nodes[lbraceIdx + 2 + i];
+      nodePtr->children[i] = pStack.nodes[pStack.pointer - lbraceIdx + i + 1];
 
     stackPop(lbraceIdx + 1); 
     stackPush(nodePtr);
@@ -506,7 +506,9 @@ int reduceIdentifier() {
       if(pStack.pointer >= 2) prevPrevNode = pStack.nodes[pStack.pointer - 2];
 
       if(!prevPrevNode || prevPrevNode->type == NTProgramPart ||
-         prevPrevNode->type == NTStatement)
+         prevPrevNode->type == NTStatement || 
+         (prevPrevNode->type == NTTerminal 
+         && prevPrevNode->token->type == TTLBrace))
       {
         // variable declaration, will reduce later
       } else if(prevPrevNode->type == NTTerminal &&
@@ -779,7 +781,7 @@ int reduceSemi() {
           } 
           else if(prev4->type == NTProgramPart || prev4->type == NTStatement
             || (prev4->type == NTTerminal && (prev4->token->type == TTColon ||
-                prev4->token->type == TTElse))) 
+            prev4->token->type == TTElse || prev4->token->type == TTLBrace))) 
           {
             // ID = EXPR ;  -- assignment
             stackPop(4);

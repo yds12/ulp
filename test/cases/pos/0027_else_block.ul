@@ -1,0 +1,8 @@
+int x = 10;
+
+if x == 10:
+  x = 0;
+else {
+  int y = x * 2;
+  x = y + 1;
+}

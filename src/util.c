@@ -27,7 +27,7 @@ int isBinaryOp(TokenType type) {
 int precedence(TokenType type) {
   if(type == TTMult || type == TTDiv) return 0;
   if(type == TTPlus || type == TTMinus) return 1;
-  if(type == TTMod) return 2;
+  if(type == TTMod) return 1;
   if(type == TTNot) return 3;
   if(type == TTAnd || type == TTOr) return 4;
   if(type == TTGreater || type == TTGEq || type == TTEq || 

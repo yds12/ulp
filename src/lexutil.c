@@ -42,6 +42,8 @@ int isSingleCharToken(char ch) {
 }
 
 void printFile(FILE* file) {
+  if(cli.outputType > OUT_DEBUG) return;
+
   rewind(file);
   char ch = fgetc(file);
 

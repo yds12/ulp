@@ -83,9 +83,7 @@ void eatDoubleSymb();
 void lexerStart(FILE* sourcefile, char* sourcefilename) {
 
 // Prints the source file
-#ifdef DEBUG
-//  printFile(sourcefile);
-#endif
+  printFile(sourcefile);
 
   // Buffer to read the chars, is reset at the end of each token
   char charBuffer[BUFFER_SIZE];

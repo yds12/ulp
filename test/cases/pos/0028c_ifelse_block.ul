@@ -1,0 +1,16 @@
+int x = 10;
+int y = 3;
+
+if x + y <= 11: {
+  int z;
+  x = y;
+  y = 0;
+  z = x + y * 2;
+} else {
+  x = y * 3;
+  y = (x * 2) % 3;
+  x = 0;
+  int z = 4;
+  z++;
+  x = z;
+}
