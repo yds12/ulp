@@ -23,6 +23,14 @@ int main(int argc, char ** argv) {
     filename = "<stdin>";
   } else { // read specified file
     sourcefile = fopen(argv[filenameIdx], "rt");
+
+    if(!sourcefile) {
+      if(cli.outputType <= OUT_DEFAULT)
+        printf("ERROR: Invalid file name.\n");
+
+      return 1;
+    }
+
     filename = argv[filenameIdx];
   }
 
