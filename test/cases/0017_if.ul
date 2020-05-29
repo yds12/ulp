@@ -1,0 +1,4 @@
+int x = 0;
+int y = 2;
+
+if y > x: x = 0;

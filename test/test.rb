@@ -5,30 +5,32 @@ STRONG_SUCCESS_COLOR = "\033[1;32m"
 END_COLOR = "\033[m"
 
 CASES_DIR = "test/cases"
+EXTENSION = ".ul"
 
 puts "Running test suite..."
 puts ""
 
-files = `ls #{CASES_DIR}`.split "\n"
+files = `ls #{CASES_DIR}/*#{EXTENSION}`.split "\n"
 
 total = 0
 success = 0
 
 files.each do |f|
   total += 1
-  command = "build/ulpc --silent #{CASES_DIR}/#{f} ; echo $?"
+  command = "build/ulpc --silent #{f} ; echo $?"
 
 #  puts "Running command:"
 #  puts "\t#{command}"
 #  puts ""
 
   result = `#{command}`
+  filename = f.sub "#{CASES_DIR}/", ""
   
   if result.strip == '0' then 
     success += 1
-    puts "\t#{f} #{SUCCESS_COLOR}pass#{END_COLOR}"
+    puts "\t#{SUCCESS_COLOR}pass#{END_COLOR} #{filename}"
   else 
-    puts "\t#{f} #{ERROR_COLOR}fail#{END_COLOR}" 
+    puts "\t#{ERROR_COLOR}fail#{END_COLOR} #{filename}" 
   end
 end
 

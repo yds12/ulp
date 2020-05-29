@@ -48,9 +48,11 @@ void parserStart(FILE* file, char* filename, int nTokens, Token* tokens) {
     } while(success);
   }
 
-#ifdef DEBUG
+  if(pStack.pointer > 0 || pStack.nodes[0]->type != NTProgram) {
+    parsError("Failed to completely parse program.", 1, 1);
+  }
+
   graphvizAst(pStack.nodes[pStack.pointer]);
-#endif
 }
 
 void shift() {
