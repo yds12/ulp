@@ -237,6 +237,10 @@ void strReplaceNodeName(char* str, char* format, NodeType type) {
       break;
     case NTAssignment: sprintf(str, format, "assignment");
       break;
+    case NTReturnSt: sprintf(str, format, "'return' statement");
+      break;
+    case NTParams: sprintf(str, format, "declaration of parameters");
+      break;
     default: sprintf(str, format, "NT");
       break;
   }
@@ -293,6 +297,10 @@ void strReplaceNodeAbbrev(char* str, char* format, Node* node) {
     case NTCallParam: sprintf(str, format, "C PARAM");
       break;
     case NTAssignment: sprintf(str, format, "ASSIGN");
+      break;
+    case NTReturnSt: sprintf(str, format, "RET st");
+      break;
+    case NTParams: sprintf(str, format, "PARAMS");
       break;
     default: sprintf(str, format, "NT");
       break;

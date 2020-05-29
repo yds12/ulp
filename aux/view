@@ -1,3 +1,4 @@
 #!/bin/sh
+cat "$1"
 build/ulpc --graphviz < "$1" | dot -Tpng > build/ast.png \
 && xviewer build/ast.png

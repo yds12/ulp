@@ -54,6 +54,8 @@ void allocChildren(Node* node, int nChildren);
 
 Token lookAhead();
 
+Node* fromStackSafe(int offset);
+
 int isSubStatement(NodeType type);
 
 int isAssignmentOp(TokenType type);

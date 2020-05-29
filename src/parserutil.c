@@ -86,11 +86,16 @@ void allocChildren(Node* node, int nChildren) {
   node->nChildren = nChildren;
 }
 
+Node* fromStackSafe(int offset) {
+  if(pStack.pointer >= offset) return pStack.nodes[pStack.pointer - offset];
+  return NULL;
+}
+
 int isSubStatement(NodeType type) {
   if(type == NTBreakSt || type == NTNextSt || type == NTIfSt ||
      type == NTLoopSt || type == NTWhileSt || type == NTNoop ||
      type == NTMatchSt || type == NTAssignment || type == NTCallSt ||
-     type == NTForSt)
+     type == NTForSt || type == NTReturnSt)
     return 1;
   return 0;
 }

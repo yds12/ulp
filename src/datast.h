@@ -103,6 +103,7 @@ typedef enum stNodeType {
   NTExpression,
   NTCallExpr,
   NTCallParam,
+  NTParams,
   NTParam,
   NTNoop,
   NTTerm,

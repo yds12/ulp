@@ -7,6 +7,7 @@
 
 void shift();
 int reduce();
+int reduceParam();
 int reduceSemi();
 int reduceExpression();
 int reduceStatement();
@@ -49,7 +50,7 @@ void parserStart(FILE* file, char* filename, int nTokens, Token* tokens) {
     parsError("Failed to completely parse program.", 1, 1);
   }
 
-  graphvizAst(pStack.nodes[pStack.pointer]);
+  graphvizAst(fromStackSafe(0));
 }
 
 void shift() {
@@ -60,9 +61,8 @@ void shift() {
 }
 
 int reduce() {
-  Node* curNode = pStack.nodes[pStack.pointer];
-  Node* prevNode = NULL;
-  if(pStack.pointer >= 1) prevNode = pStack.nodes[pStack.pointer - 1];
+  Node* curNode = fromStackSafe(0);
+  Node* prevNode = fromStackSafe(1);
 
   int reduced = 0;
 
@@ -112,6 +112,8 @@ int reduce() {
     singleParent(NTExpression);
     reduced = 1;
   } else if(curNode->type == NTBinaryOp) { // UNFINISHED
+  } else if(curNode->type == NTParam) { // UNFINISHED
+    reduced = reduceParam();
   } else if(curNode->type == NTIdentifier) { // UNFINISHED
     reduced = reduceIdentifier();
   } else if(curNode->type == NTTerminal) { // UNFINISHED
@@ -160,6 +162,48 @@ int reduce() {
   return reduced;
 }
 
+int reduceParam() {
+  int reduced = 0;
+  Node* prevNode = fromStackSafe(1);
+
+  if(!prevNode) {
+    parsError(
+      "Declaration of parameters at the beginning of the program.", 1, 1); 
+  }
+
+  if(lookAhead().type == TTArrow) { // end of function parameters declaration
+    Node* idNode = NULL;
+    int idIndex = 1;
+    int nParams = 1;
+
+    while(1) {
+      idNode = fromStackSafe(idIndex);
+      if(!idNode) {
+        Node* problematic = astFirstLeaf(prevNode);
+        parsError("Bad declaration of parameters.", problematic->token->lnum, 
+          problematic->token->chnum);
+      }
+
+      if(idNode->type == NTParam) nParams++;
+      else if(idNode->type == NTIdentifier) {
+        break;
+      }
+      idIndex++;
+    }
+
+    Node* nodePtr = newNode(NTParams);
+    allocChildren(nodePtr, nParams);
+
+    for(int i = 0; i < nParams; i++)
+      nodePtr->children[i] = fromStackSafe(idIndex - (i * 2 + 1));
+
+    stackPop(1 + (nParams - 1) * 2); 
+    stackPush(nodePtr);
+    reduced = 1;
+  }
+  return reduced;
+}
+
 int reduceRBrace() {
   int reduced = 0;
   Node* prevNode = NULL;
@@ -168,9 +212,8 @@ int reduceRBrace() {
   int lbraceIdx = 1;
 
   while(1) {
-    if(pStack.pointer >= lbraceIdx)
-      prevNode = pStack.nodes[pStack.pointer - lbraceIdx];
-    else { // error
+    prevNode = fromStackSafe(lbraceIdx);
+    if(!prevNode) { // error
       Node* problematic = astFirstLeaf(prevNode);
       parsError("Malformed block of statements.", problematic->token->lnum, 
         problematic->token->chnum);
@@ -190,7 +233,7 @@ int reduceRBrace() {
     allocChildren(nodePtr, lbraceIdx - 1);
 
     for(int i = 0; i < lbraceIdx - 1; i++)
-      nodePtr->children[i] = pStack.nodes[pStack.pointer - lbraceIdx + i + 1];
+      nodePtr->children[i] = fromStackSafe(lbraceIdx - (i + 1));
 
     stackPop(lbraceIdx + 1); 
     stackPush(nodePtr);
@@ -203,9 +246,8 @@ int reduceRBrace() {
 
 int reduceStatement() {
   int reduced = 0;
-  Node* curNode = pStack.nodes[pStack.pointer];
-  Node* prevNode = NULL;
-  if(pStack.pointer >= 1) prevNode = pStack.nodes[pStack.pointer - 1];
+  Node* curNode = fromStackSafe(0);
+  Node* prevNode = fromStackSafe(1);
 
   if(!prevNode || prevNode->type == NTProgramPart) {
     // we have a finished statement and the previous statement is already
@@ -220,8 +262,8 @@ int reduceStatement() {
             prevNode->token->type == TTColon) {
     Node* iwmfNode = NULL;
 
-    if(pStack.pointer >= 3) iwmfNode = pStack.nodes[pStack.pointer - 3];
-    else {
+    iwmfNode = fromStackSafe(3);
+    if(!iwmfNode) {
       Node* problematic = astFirstLeaf(curNode);
       parsError("Before ':' and a statement, an 'if', 'while', "
         "'for' or 'match' construct is expected.", 
@@ -229,7 +271,7 @@ int reduceStatement() {
     }
 
     if(iwmfNode->type == NTTerminal && iwmfNode->token->type == TTIf) {
-      Node* condNode = pStack.nodes[pStack.pointer - 2];
+      Node* condNode = fromStackSafe(2);
 
       if(condNode->type != NTExpression) { // error
         parsErrorHelper("Unexpected %s as condition for 'if' statement.",
@@ -249,6 +291,18 @@ int reduceStatement() {
     } else if(iwmfNode->type == NTTerminal 
               && iwmfNode->token->type == TTWhile) {
       // TODO while
+      Node* whileNode = iwmfNode;
+      Node* condNode = fromStackSafe(2);
+      Node* colonNode = fromStackSafe(1);
+
+      assertEqual(condNode, NTExpression);
+      assertTokenEqual(colonNode, TTColon);
+
+      stackPop(4);
+      Node* nodePtr = createAndPush(NTWhileSt, 2);
+      nodePtr->children[0] = condNode;
+      nodePtr->children[1] = curNode;
+      reduced = 1;
     } else if(iwmfNode->type == NTMatchClause
               || (iwmfNode->type == NTTerminal
               && iwmfNode->token->type == TTLBrace)) {
@@ -261,12 +315,12 @@ int reduceStatement() {
           problematic->token->lnum, problematic->token->chnum);
       }
 
-      Node* forNode = pStack.nodes[pStack.pointer - 7];
-      Node* declNode = pStack.nodes[pStack.pointer - 6];
-      Node* comma1 = pStack.nodes[pStack.pointer - 5];
-      Node* exprNode = pStack.nodes[pStack.pointer - 4];
-      Node* comma2 = pStack.nodes[pStack.pointer - 3];
-      Node* assignNode = pStack.nodes[pStack.pointer - 2];
+      Node* forNode = fromStackSafe(7);
+      Node* declNode = fromStackSafe(6);
+      Node* comma1 = fromStackSafe(5);
+      Node* exprNode = fromStackSafe(4);
+      Node* comma2 = fromStackSafe(3);
+      Node* assignNode = fromStackSafe(2);
 
       assertTokenEqual(forNode, TTFor);
       assertEqual(declNode, NTDeclaration);
@@ -318,9 +372,9 @@ int reduceStatement() {
         problematic->token->chnum);
     }
 
-    Node* thenNode = pStack.nodes[pStack.pointer - 2];
-    Node* condNode = pStack.nodes[pStack.pointer - 4];
-    Node* ifNode = pStack.nodes[pStack.pointer - 5];
+    Node* thenNode = fromStackSafe(2);
+    Node* condNode = fromStackSafe(4);
+    Node* ifNode = fromStackSafe(5);
 
     // TODO: replace by asserts (but should pass "bad if stat" as arg.)
     if(thenNode->type != NTStatement) { // error: statement expected
@@ -343,6 +397,57 @@ int reduceStatement() {
     nodePtr->children[1] = thenNode;
     nodePtr->children[2] = curNode;
     reduced = 1;
+  } else if(prevNode->type == NTTerminal && prevNode->token->type == TTLoop) {
+    stackPop(2);
+    Node* nodePtr = createAndPush(NTLoopSt, 1);
+    nodePtr->children[0] = curNode;
+    reduced = 1;
+  } else if(prevNode->type == NTTerminal && prevNode->token->type == TTArrow) {
+    // TODO function declaration
+    Node* prev3 = fromStackSafe(3);
+    if(!prev3) {
+      Node* problematic = astFirstLeaf(curNode);
+      parsError("Bad function declaration.", 
+        problematic->token->lnum, problematic->token->chnum);
+    }
+
+    if(prev3->type == NTTerminal && prev3->token->type == TTFunc) {
+      // function declaration without parameters
+      Node* idNode = fromStackSafe(2);
+      assertEqual(idNode, NTIdentifier);
+
+      // create an empty params node
+      Node* paramsNode = newNode(NTParams);
+      paramsNode->nChildren = 0;
+
+      stackPop(4);
+      Node* nodePtr = createAndPush(NTFunction, 3);
+      nodePtr->children[0] = idNode;
+      nodePtr->children[1] = paramsNode;
+      nodePtr->children[2] = curNode;
+      reduced = 1;
+    } else { // function declaration with parameters
+      Node* prev4 = fromStackSafe(4);
+
+      if(!prev4) {
+        Node* problematic = astFirstLeaf(curNode);
+        parsError("Bad function declaration.", 
+          problematic->token->lnum, problematic->token->chnum);
+      }
+
+      Node* idNode = fromStackSafe(3);
+      Node* paramsNode = fromStackSafe(2);
+      assertTokenEqual(prev4, TTFunc);
+      assertEqual(idNode, NTIdentifier);
+      assertEqual(paramsNode, NTParams);
+
+      stackPop(5);
+      Node* nodePtr = createAndPush(NTFunction, 3);
+      nodePtr->children[0] = idNode;
+      nodePtr->children[1] = paramsNode;
+      nodePtr->children[2] = curNode;
+      reduced = 1;
+    }
   }
 
   return reduced;
@@ -350,11 +455,9 @@ int reduceStatement() {
 
 int reduceRPar() {
   int reduced = 0;
-  Node* curNode = pStack.nodes[pStack.pointer];
-  Node* prevNode = NULL;
-  Node* prevPrevNode = NULL;
-  if(pStack.pointer >= 1) prevNode = pStack.nodes[pStack.pointer - 1];
-  if(pStack.pointer >= 2) prevPrevNode = pStack.nodes[pStack.pointer - 2];
+  Node* curNode = fromStackSafe(0);
+  Node* prevNode = fromStackSafe(1);
+  Node* prevPrevNode = fromStackSafe(2);
 
   if(!prevNode) {
     Node* problematic = astLastLeaf(curNode);
@@ -385,7 +488,7 @@ int reduceRPar() {
 int reduceFunctionCallSt() {
   int reduced = 0;
   Node* prevNode = NULL;
-  prevNode = pStack.nodes[pStack.pointer - 1];
+  prevNode = fromStackSafe(1);
 
   if(prevNode->type == NTCallParam) { // at least one param
     Node* idNode = prevNode;
@@ -394,10 +497,9 @@ int reduceFunctionCallSt() {
 
     while(idNode->type != NTIdentifier) { // find the function name
       idIndex++;
+      idNode = fromStackSafe(idIndex);
 
-      if(pStack.pointer >= idIndex) {
-        idNode = pStack.nodes[pStack.pointer - idIndex];
-      } else { // this should never happen (as param checks for this)
+      if(!idNode) { // this should never happen (as param checks for this)
         Node* problematic = astFirstLeaf(idNode);
         parsError("Malformed function call statement.", 
           problematic->token->lnum, problematic->token->chnum);
@@ -415,7 +517,7 @@ int reduceFunctionCallSt() {
     nodePtr->children[0] = idNode;
 
     for(int i = 1; i <= nParams; i++)
-      nodePtr->children[i] = pStack.nodes[idIndex + i * 2];
+      nodePtr->children[i] = fromStackSafe(idIndex - (i * 2));
 
     // we know there is at least one param
     // ID PARAM [, PARAM] ;
@@ -425,7 +527,7 @@ int reduceFunctionCallSt() {
     reduced = 1;
   } else if(prevNode->type == NTTerminal && prevNode->token->type == TTLPar) {
     // ID();  -- function call statement without params
-    Node* idNode = pStack.nodes[pStack.pointer - 3];
+    Node* idNode = fromStackSafe(3);
 
     stackPop(4);
     Node* nodePtr = createAndPush(NTCallSt, 1);
@@ -439,7 +541,7 @@ int reduceFunctionCallSt() {
 int reduceFunctionCallExpr() {
   int reduced = 0;
   Node* prevNode = NULL;
-  prevNode = pStack.nodes[pStack.pointer - 1];
+  prevNode = fromStackSafe(1);
 
   if(prevNode->type == NTCallParam) { // at least one param
     Node* idNode = prevNode;
@@ -448,10 +550,10 @@ int reduceFunctionCallExpr() {
 
     while(idNode->type != NTIdentifier) { // find the function name
       nParams++;
-      if(pStack.pointer >= 1 + (nParams * 2)) {
-        idIndex = pStack.pointer - (1 + nParams * 2);
-        idNode = pStack.nodes[idIndex];
-      } else { // this should never happen (as param checks for this)
+      idIndex = (1 + nParams * 2);
+      idNode = fromStackSafe(idIndex);
+
+      if(!idNode) { // this should never happen (as param checks for this)
         Node* problematic = astFirstLeaf(prevNode);
         parsError("Malformed function call expression.", 
           problematic->token->lnum, problematic->token->chnum);
@@ -463,14 +565,14 @@ int reduceFunctionCallExpr() {
     nodePtr->children[0] = idNode;
 
     for(int i = 1; i <= nParams; i++)
-      nodePtr->children[i] = pStack.nodes[idIndex + i * 2];
+      nodePtr->children[i] = fromStackSafe(idIndex - i * 2);
 
     stackPop(2 + nParams * 2);
     stackPush(nodePtr);
     reduced = 1;
   } else if(prevNode->type == NTTerminal && prevNode->token->type == TTLPar) {
     // ID()  -- function call without params
-    Node* idNode = pStack.nodes[pStack.pointer - 2];
+    Node* idNode = fromStackSafe(2);
 
     stackPop(3);
     Node* nodePtr = createAndPush(NTCallExpr, 1);
@@ -483,9 +585,8 @@ int reduceFunctionCallExpr() {
 
 int reduceIdentifier() {
   int reduced = 0;
-  Node* curNode = pStack.nodes[pStack.pointer];
-  Node* prevNode = NULL;
-  if(pStack.pointer >= 1) prevNode = pStack.nodes[pStack.pointer - 1];
+  Node* curNode = fromStackSafe(0);
+  Node* prevNode = fromStackSafe(1);
   TokenType laType = lookAhead().type;
 
   if(laType == TTId || laType == TTLPar || laType == TTNot 
@@ -502,8 +603,7 @@ int reduceIdentifier() {
     }
     else if(prevNode && prevNode->type == NTType) // in declaration
     {
-      Node* prevPrevNode = NULL;
-      if(pStack.pointer >= 2) prevPrevNode = pStack.nodes[pStack.pointer - 2];
+      Node* prevPrevNode = fromStackSafe(2);
 
       if(!prevPrevNode || prevPrevNode->type == NTProgramPart ||
          prevPrevNode->type == NTStatement || 
@@ -533,11 +633,9 @@ int reduceIdentifier() {
 
 int reduceExpression() {
   int reduced = 0;
-  Node* curNode = pStack.nodes[pStack.pointer];
-  Node* prevNode = NULL;
-  Node* prevPrevNode = NULL;
-  if(pStack.pointer >= 1) prevNode = pStack.nodes[pStack.pointer - 1];
-  if(pStack.pointer >= 2) prevPrevNode = pStack.nodes[pStack.pointer - 2];
+  Node* curNode = fromStackSafe(0);
+  Node* prevNode = fromStackSafe(1);
+  Node* prevPrevNode = fromStackSafe(2);
 
   Token laToken = lookAhead();
   TokenType laType = laToken.type;
@@ -576,8 +674,10 @@ int reduceExpression() {
       parsError("Program beginning with a comma.", 
         problematic->token->lnum, problematic->token->chnum);
     } else if(prevPrevNode->type == NTCallParam) { // another call param
-      singleParent(NTCallParam);
-      reduced = 1;
+      if(isExprTerminator(laType)) { // expression is finished
+        singleParent(NTCallParam);
+        reduced = 1;
+      }
     } else if(prevPrevNode->type == NTDeclaration) { // for statement
       // do nothing
     } else { // unexpected node before: , EXPR
@@ -620,12 +720,11 @@ int reduceExpression() {
       nodePtr->children[1] = curNode;
       reduced = 1;
     } else if(laType == TTComma) { // check FOR statement
-      Node* forNode = NULL;
-      if(pStack.pointer >= 4) forNode = pStack.nodes[pStack.pointer - 4];
+      Node* forNode = fromStackSafe(4);
 
       if(forNode && forNode->type == NTTerminal 
          && forNode->token->type == TTFor) {
-        Node* typeNode = pStack.nodes[pStack.pointer - 3];
+        Node* typeNode = fromStackSafe(3);
         if(typeNode->type != NTType) { // error
           parsErrorHelper("Expected type, found %s.",
             typeNode, astFirstLeaf(typeNode));
@@ -657,10 +756,8 @@ int reduceExpression() {
                 (prevNode->type == NTTerminal &&
                 prevNode->token->type == TTLBrace))) {
       } else { // for DECL , EXPR , ... EXPR :
-        Node* assignNode = NULL;
-        Node* varNode = NULL;
-        if(pStack.pointer >= 1) assignNode = pStack.nodes[pStack.pointer - 1];
-        if(pStack.pointer >= 2) varNode = pStack.nodes[pStack.pointer - 2];
+        Node* assignNode = fromStackSafe(1);
+        Node* varNode = fromStackSafe(2);
 
         if(!assignNode) {
           Node* problematic = astFirstLeaf(curNode);
@@ -735,11 +832,9 @@ int reduceExpression() {
 
 int reduceSemi() {
   int reduced = 0;
-  Node* curNode = pStack.nodes[pStack.pointer];
-  Node* prevNode = NULL;
-  Node* prevPrevNode = NULL;
-  if(pStack.pointer >= 1) prevNode = pStack.nodes[pStack.pointer - 1];
-  if(pStack.pointer >= 2) prevPrevNode = pStack.nodes[pStack.pointer - 2];
+  Node* curNode = fromStackSafe(0);
+  Node* prevNode = fromStackSafe(1);
+  Node* prevPrevNode = fromStackSafe(2);
 
   if(!prevNode || prevNode->type == NTProgramPart) {
     singleParent(NTNoop);
@@ -765,16 +860,20 @@ int reduceSemi() {
       nodePtr->children[0] = prevPrevNode;
       nodePtr->children[1] = prevNode;
       reduced = 1;
+    } else if(ttype == TTReturn) { // return ;
+      stackPop(2);
+      Node* nodePtr = createAndPush(NTReturnSt, 0);
+      reduced = 1;
     }
   } 
   else if(prevNode->type == NTExpression) {
     if(prevPrevNode && prevPrevNode->type == NTTerminal) {
-      if(prevPrevNode->token->type == TTAssign) {
+      if(prevPrevNode->token->type == TTAssign ||
+         prevPrevNode->token->type == TTAdd ||
+         prevPrevNode->token->type == TTSub) {
         // assignment or declaration with assignment
-        Node* prev3 = NULL;
-        Node* prev4 = NULL;
-        if(pStack.pointer >= 1) prev3 = pStack.nodes[pStack.pointer - 3];
-        if(pStack.pointer >= 2) prev4 = pStack.nodes[pStack.pointer - 4];
+        Node* prev3 = fromStackSafe(3);
+        Node* prev4 = fromStackSafe(4);
 
         if(prev3 && prev3->type == NTIdentifier) {
           if(!prev4) { // error
@@ -790,14 +889,16 @@ int reduceSemi() {
             || (prev4->type == NTTerminal && (prev4->token->type == TTColon ||
             prev4->token->type == TTElse || prev4->token->type == TTLBrace))) 
           {
-            // ID = EXPR ;  -- assignment
+            // ID ASSIGN_OP EXPR ;  -- assignment
             stackPop(4);
-            Node* nodePtr = createAndPush(NTAssignment, 2);
+            Node* nodePtr = createAndPush(NTAssignment, 3);
             nodePtr->children[0] = prev3; // ID
-            nodePtr->children[1] = prevNode; // EXPR
+            nodePtr->children[1] = prevPrevNode; // ASSIGN OP
+            nodePtr->children[2] = prevNode; // EXPR
             reduced = 1;
           }
           else if(prev4->type == NTType) { // declaration w/ assignment
+            assertTokenEqual(prevPrevNode, TTAssign);
             // TYPE ID = EXPR ;  -- declaration with assignment
             stackPop(5);
             Node* nodePtr = createAndPush(NTDeclaration, 3);
@@ -853,7 +954,7 @@ void reduceRoot() {
 }
 
 void singleParent(NodeType type) {
-  Node* curNode = pStack.nodes[pStack.pointer];
+  Node* curNode = fromStackSafe(0);
   stackPop(1);
   Node* nodePtr = createAndPush(type, 1);
   nodePtr->children[0] = curNode;
@@ -866,7 +967,7 @@ int canPrecedeStatement(Node* node) {
   if(type == NTTerminal) {
     TokenType ttype = node->token->type;
     if(ttype == TTColon || ttype == TTComma || ttype == TTElse ||
-       ttype == TTArrow || ttype == TTLBrace)
+       ttype == TTArrow || ttype == TTLBrace || ttype == TTLoop)
       return 1;
   }
   return 0;
