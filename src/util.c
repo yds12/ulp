@@ -19,7 +19,7 @@ int isBinaryOp(TokenType type) {
   if(type == TTEq || type == TTPlus || type == TTMinus ||
      type == TTMult || type == TTDiv || type == TTGreater ||
      type == TTLess || type == TTGEq || type == TTLEq ||
-     type == TTAnd || type == TTOr)
+     type == TTAnd || type == TTOr || type == TTMod)
     return 1;
   return 0;
 }
@@ -234,6 +234,8 @@ void strReplaceNodeName(char* str, char* format, NodeType type) {
       break;
     case NTCallParam: sprintf(str, format, "parameter expression");
       break;
+    case NTAssignment: sprintf(str, format, "assignment");
+      break;
     default: sprintf(str, format, "NT");
       break;
   }
@@ -288,6 +290,8 @@ void strReplaceNodeAbbrev(char* str, char* format, Node* node) {
     case NTCallExpr: sprintf(str, format, "CALL");
       break;
     case NTCallParam: sprintf(str, format, "C PARAM");
+      break;
+    case NTAssignment: sprintf(str, format, "ASSIGN");
       break;
     default: sprintf(str, format, "NT");
       break;

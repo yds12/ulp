@@ -39,10 +39,7 @@ void parserStart(FILE* file, char* filename, int nTokens, Token* tokens) {
     int success = 0;
 
     do {
-
-#ifdef DEBUG
-//printStack();  
-#endif
+      printStack();  
 
       success = reduce(); 
     } while(success);
@@ -193,7 +190,7 @@ int reduceRBrace() {
     allocChildren(nodePtr, lbraceIdx - 1);
 
     for(int i = 0; i < lbraceIdx - 1; i++)
-      nodePtr->children[i] = pStack.nodes[lbraceIdx + 1 + i];
+      nodePtr->children[i] = pStack.nodes[lbraceIdx + 2 + i];
 
     stackPop(lbraceIdx + 1); 
     stackPush(nodePtr);
@@ -278,6 +275,7 @@ int reduceStatement() {
       assertTokenEqual(comma2, TTComma);
       assertEqual(assignNode, NTStatement);
 
+      // TODO: add msg parameter to assert functions
 /*      if(forNode->type != NTTerminal || forNode->token->type != TTFor) {
         parsErrorHelper("Expected 'for' keyword, found %s.", 
           forNode, astFirstLeaf(forNode));
@@ -324,6 +322,7 @@ int reduceStatement() {
     Node* condNode = pStack.nodes[pStack.pointer - 4];
     Node* ifNode = pStack.nodes[pStack.pointer - 5];
 
+    // TODO: replace by asserts (but should pass "bad if stat" as arg.)
     if(thenNode->type != NTStatement) { // error: statement expected
       parsErrorHelper("Bad 'if' statement: expected statement, found %s.",
         thenNode, astFirstLeaf(thenNode));
@@ -690,9 +689,18 @@ int reduceExpression() {
   } else if(isBinaryOp(laType)) {
     if(prevNode->type == NTBinaryOp) {
       if(prevPrevNode && prevPrevNode->type != NTExpression) {
-        // If we see a OP EXPR sequence, there must be an EXPR before that 
-        parsErrorHelper("Expected expression before operator, found %s.",
-          prevPrevNode, astLastLeaf(prevPrevNode));
+        if(prevNode->children[0]->token->type == TTMinus) { // - EXPR
+          stackPop(2);
+          Node* nodePtr = createAndPush(NTExpression, 2);
+          nodePtr->children[0] = prevNode;
+          nodePtr->children[1] = curNode;
+          reduced = 1;
+        } else {
+          // If we see a OP EXPR sequence, there must be an EXPR before that 
+          // (except if it is a minus)
+          parsErrorHelper("Expected expression before operator, found %s.",
+            prevPrevNode, astLastLeaf(prevPrevNode));
+        }
       } else if(precedence(laType) >= 
                 precedence(prevNode->children[0]->token->type)){ 
         // EXPR OP EXPR OP sequence, reduce if the previous has precedence
@@ -741,6 +749,14 @@ int reduceSemi() {
       nodePtr->children[1] = curNode;
       reduced = 1;
     }
+    else if(ttype == TTIncr || ttype == TTDecr) {
+      assertEqual(prevPrevNode, NTIdentifier);  // ID++;   or   ID--;
+      stackPop(3);
+      Node* nodePtr = createAndPush(NTAssignment, 2);
+      nodePtr->children[0] = prevPrevNode;
+      nodePtr->children[1] = prevNode;
+      reduced = 1;
+    }
   } 
   else if(prevNode->type == NTExpression) {
     if(prevPrevNode && prevPrevNode->type == NTTerminal) {
@@ -761,7 +777,9 @@ int reduceSemi() {
             Node* problematic = astFirstLeaf(prev3);
             parsError(str, problematic->token->lnum, problematic->token->chnum);
           } 
-          else if(prev4->type == NTProgramPart || prev4->type == NTStatement) 
+          else if(prev4->type == NTProgramPart || prev4->type == NTStatement
+            || (prev4->type == NTTerminal && (prev4->token->type == TTColon ||
+                prev4->token->type == TTElse))) 
           {
             // ID = EXPR ;  -- assignment
             stackPop(4);
@@ -780,8 +798,7 @@ int reduceSemi() {
             reduced = 1;
           }
         } else { // error
-          parsErrorHelper("Assignment to %s.",
-            prev3, astFirstLeaf(prev3));
+          parsErrorHelper("Assignment to %s.", prev3, astFirstLeaf(prev3));
         }
       } else if(prevPrevNode->token->type == TTReturn) { // return statement
         stackPop(3);
@@ -793,6 +810,14 @@ int reduceSemi() {
   }
   else if(prevNode->type == NTCallParam) { // function call statement
     reduced = reduceFunctionCallSt();
+  }
+  else if(prevNode->type == NTIdentifier) { // uninitialized declaration
+    assertEqual(prevPrevNode, NTType);
+    stackPop(3);
+    Node* nodePtr = createAndPush(NTDeclaration, 2);
+    nodePtr->children[0] = prevPrevNode;
+    nodePtr->children[1] = prevNode;
+    reduced = 1;
   }
 
   return reduced;

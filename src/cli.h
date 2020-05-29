@@ -13,11 +13,12 @@
 #define VERSION "0.0.4"
 
 // Compiler output type
-#define OUT_VERBOSE 0         // all output
-#define OUT_DEFAULT 1         // default output
-#define OUT_SILENT 2          // no output
+#define OUT_DEBUG 0           // all output
+#define OUT_VERBOSE 1         // all non-debug output
+#define OUT_DEFAULT 2         // default output
+#define OUT_SILENT 3          // no output
 
-#define OUT_GRAPHVIZ 3        // outputs parse tree in Graphviz format
+#define OUT_GRAPHVIZ 4        // outputs parse tree in Graphviz format
 
 // Global compiler options variables
 int CLI_OUTPUT_TYPE;

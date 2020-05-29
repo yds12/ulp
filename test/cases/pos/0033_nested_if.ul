@@ -1,0 +1,6 @@
+int x = 3;
+int y = 4;
+
+if x > 2: {
+  if x < y: x++;
+}

@@ -9,6 +9,7 @@ void displayHelp();
 void displayVersion();
 
 int parseCLArgs(int argc, char ** argv) {
+  setDefaultOptions();
   int fileIdx = -1;
   if(argc < 2) return fileIdx; // nothing to do
 
@@ -43,6 +44,8 @@ int processCLArg(char* arg) {
       case 8:
         if(strncmp("--silent", arg, len) == 0) 
           cli.outputType = OUT_SILENT;
+        else if(strncmp("--cdebug", arg, len) == 0) 
+          cli.outputType = OUT_DEBUG;
         break;
       case 9:
         if(strncmp("--version", arg, len) == 0) {
