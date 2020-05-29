@@ -1,0 +1,5 @@
+fn sum int x, int y => {
+  return x + y;
+}
+
+sum x, y;

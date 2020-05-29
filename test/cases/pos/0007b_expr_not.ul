@@ -1,0 +1,2 @@
+int x = 3;
+bool b = not x + 3 < 2;

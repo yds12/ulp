@@ -1,0 +1,3 @@
+fn ignore int n => return;
+
+ignore 3;

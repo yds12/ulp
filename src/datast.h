@@ -78,7 +78,9 @@ typedef enum enTokenType {
   TTNot,
   TTReturn,
   TTLoop,
-  TTMatch
+  TTMatch,
+  TTTrue,
+  TTFalse
 } TokenType;
 
 typedef enum stNodeType {

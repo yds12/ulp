@@ -1,0 +1,3 @@
+int i = 10;
+
+bool c = not i > 3;

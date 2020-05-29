@@ -1,0 +1,6 @@
+int x = 10;
+
+loop {
+  if x == 0: break;
+  x--;
+}

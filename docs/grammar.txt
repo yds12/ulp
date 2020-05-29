@@ -15,11 +15,11 @@ STATEMENT := { STATEMENT* }
            | ASSIGNMENT
            | IDENTIFIER [CALL_PARAMS] ;
            | if EXPR : STATEMENT [else STATEMENT]
-           | return EXPR ;
+           | return [EXPR] ;
            | loop STATEMENT
            | while EXPR : STATEMENT
            | for FOR_DECLARATION , EXPR , FOR_ASSIGNMENT : STATEMENT
-           | match EXPR { MATCH_CLAUSES }
+           | match EXPR : { MATCH_CLAUSES }
            | break ;
            | next ;
 
@@ -44,6 +44,7 @@ EXPR := TERM
       | ( EXPR )
 
 MATCH_CLAUSES := EXPR : STATEMENT [MATCH_CLAUSES]
+               | else : STATEMENT
 
 PARAMS := TYPE IDENTIFIER [, PARAMS]
 

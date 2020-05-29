@@ -1,0 +1,14 @@
+int y = 10;
+
+fn ret0 => return 0;
+
+fn sum int n, int m => {
+  return n + m;
+}
+
+int x;
+
+fn sum_with_y int n => {
+  int summation = n + y;
+  return summation;
+}

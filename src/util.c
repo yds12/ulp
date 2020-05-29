@@ -3,7 +3,8 @@
 
 int isLiteral(TokenType type) {
   if(type == TTLitInt || type == TTLitFloat || type == TTLitString ||
-     type == TTLitBool || type == TTLitArray)
+     type == TTLitBool || type == TTLitArray || type == TTTrue ||
+     type == TTFalse)
     return 1;
   return 0;
 }

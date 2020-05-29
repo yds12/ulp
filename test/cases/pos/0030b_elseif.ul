@@ -1,0 +1,4 @@
+int x = 100;
+if x < 1: x++;
+else if x > 10: x--;
+else x = 0;

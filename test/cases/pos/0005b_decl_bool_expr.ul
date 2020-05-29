@@ -1,0 +1,4 @@
+bool b = true;
+bool c = false;
+
+bool d = b and c;

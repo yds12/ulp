@@ -164,12 +164,14 @@ void eatIDKW()
       else if(strncmp("else", buffer, bufpos) == 0) type = TTElse;
       else if(strncmp("next", buffer, bufpos) == 0) type = TTNext;
       else if(strncmp("loop", buffer, bufpos) == 0) type = TTLoop;
+      else if(strncmp("true", buffer, bufpos) == 0) type = TTTrue;
       break;
     case 5:
       if(strncmp("break", buffer, bufpos) == 0) type = TTBreak;
       else if(strncmp("float", buffer, bufpos) == 0) type = TTFloat;
       else if(strncmp("while", buffer, bufpos) == 0) type = TTWhile;
       else if(strncmp("match", buffer, bufpos) == 0) type = TTMatch;
+      else if(strncmp("false", buffer, bufpos) == 0) type = TTFalse;
       break;
     case 6:
       if(strncmp("string", buffer, bufpos) == 0) type = TTString;

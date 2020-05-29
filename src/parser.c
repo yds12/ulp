@@ -612,6 +612,13 @@ int reduceExpression() {
         nodePtr->children[2] = curNode;
         reduced = 1;
       }
+    } else if(prevNode->type == NTTerminal &&
+              prevNode->token->type == TTNot) { // not EXPR
+      stackPop(2);
+      Node* nodePtr = createAndPush(NTExpression, 2);
+      nodePtr->children[0] = prevNode;
+      nodePtr->children[1] = curNode;
+      reduced = 1;
     } else if(laType == TTComma) { // check FOR statement
       Node* forNode = NULL;
       if(pStack.pointer >= 4) forNode = pStack.nodes[pStack.pointer - 4];
