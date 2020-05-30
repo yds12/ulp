@@ -24,9 +24,6 @@ void singleParent(NodeType type);
 // Checks whether a certain type can come before a statement
 int canPrecedeStatement(Node* node);
 
-// Checks to see if all the tree is healthy
-void checkTree(Node* node);
-
 void parserStart(FILE* file, char* filename, int nTokens, Token* tokens) {
   parserState = (ParserState) { 
     .file = file, 
@@ -48,11 +45,11 @@ void parserStart(FILE* file, char* filename, int nTokens, Token* tokens) {
     } while(success);
   }
 
-  if(pStack.pointer > 0 || pStack.nodes[0]->type != NTProgram) {
+  if(pStack.pointer > 0 || fromStackSafe(0)->type != NTProgram) {
     genericError("Failed to completely parse program.");
   }
 
-  checkTree(fromStackSafe(0));
+  checkTree(fromStackSafe(0), parserState.nodeCount);
   graphvizAst(fromStackSafe(0));
 }
 
@@ -85,8 +82,8 @@ int reduce() {
       // independent declaration
       singleParent(NTProgramPart);
       reduced = 1;
-    } else if(prevNode->type == NTStatement || (prevNode->type == NTTerminal
-       && prevNode->token->type == TTLBrace)) {
+    } else if(prevNode->type == NTStatement 
+              || nodeIsToken(prevNode, TTLBrace)) {
       // independent declaration in block
       singleParent(NTStatement);
       reduced = 1;
@@ -224,7 +221,7 @@ int reduceRBrace() {
     if(prevNode->type == NTStatement) nStatements++;
 
     if(prevNode->type != NTStatement) {
-      if(prevNode->type != NTTerminal || prevNode->token->type != TTLBrace) {
+      if(!nodeIsToken(prevNode, TTLBrace)) {
         isBlock = 0;
       }
       break;
@@ -263,11 +260,9 @@ int reduceStatement() {
     // build error string
     parsErrorHelper("Unexpected %s before statement.",
       prevNode, astLastLeaf(prevNode));
-  } else if(prevNode->type == NTTerminal &&
-            prevNode->token->type == TTColon) {
-    Node* iwmfNode = NULL;
+  } else if(nodeIsToken(prevNode, TTColon)) {
+    Node* iwmfNode = fromStackSafe(3);
 
-    iwmfNode = fromStackSafe(3);
     if(!iwmfNode) {
       Node* problematic = astFirstLeaf(curNode);
       parsError("Before ':' and a statement, an 'if', 'while', "
@@ -275,7 +270,7 @@ int reduceStatement() {
         problematic->token->lnum, problematic->token->chnum);
     }
 
-    if(iwmfNode->type == NTTerminal && iwmfNode->token->type == TTIf) {
+    if(nodeIsToken(iwmfNode, TTIf)) {
       Node* condNode = fromStackSafe(2);
 
       if(condNode->type != NTExpression) { // error
@@ -291,8 +286,7 @@ int reduceStatement() {
         Node* nodePtr = createAndPush(NTIfSt, 2, condNode, curNode);
         reduced = 1;
       }
-    } else if(iwmfNode->type == NTTerminal 
-              && iwmfNode->token->type == TTWhile) {
+    } else if(nodeIsToken(iwmfNode, TTWhile)) {
       Node* whileNode = iwmfNode;
       Node* condNode = fromStackSafe(2);
       Node* colonNode = fromStackSafe(1);
@@ -304,8 +298,7 @@ int reduceStatement() {
       Node* nodePtr = createAndPush(NTWhileSt, 2, condNode, curNode);
       reduced = 1;
     } else if(iwmfNode->type == NTMatchClause
-              || (iwmfNode->type == NTTerminal
-              && iwmfNode->token->type == TTLBrace)) {
+              || nodeIsToken(iwmfNode, TTLBrace)) {
       // TODO match
     } else { // it has to be a FOR statement
       if(pStack.pointer < 7) {
@@ -334,7 +327,7 @@ int reduceStatement() {
         declNode, exprNode, assignNode, curNode);
       reduced = 1;
     }
-  } else if(prevNode->type == NTTerminal && prevNode->token->type == TTElse) {
+  } else if(nodeIsToken(prevNode, TTElse)) {
     if(pStack.pointer < 5) { // error: incomplete if statement
       Node* problematic = astFirstLeaf(prevNode);
       parsError("Malformed 'if' statement.", problematic->token->lnum, 
@@ -352,11 +345,11 @@ int reduceStatement() {
     stackPop(6);
     Node* nodePtr = createAndPush(NTIfSt, 3, condNode, thenNode, curNode);
     reduced = 1;
-  } else if(prevNode->type == NTTerminal && prevNode->token->type == TTLoop) {
+  } else if(nodeIsToken(prevNode, TTLoop)) {
     stackPop(2);
     Node* nodePtr = createAndPush(NTLoopSt, 1, curNode);
     reduced = 1;
-  } else if(prevNode->type == NTTerminal && prevNode->token->type == TTArrow) {
+  } else if(nodeIsToken(prevNode, TTArrow)) {
     // TODO function declaration
     Node* prev3 = fromStackSafe(3);
     if(!prev3) {
@@ -365,7 +358,7 @@ int reduceStatement() {
         problematic->token->lnum, problematic->token->chnum);
     }
 
-    if(prev3->type == NTTerminal && prev3->token->type == TTFunc) {
+    if(nodeIsToken(prev3, TTFunc)) {
       // function declaration without parameters
       Node* idNode = fromStackSafe(2);
       assertEqual(idNode, NTIdentifier, "");
@@ -418,15 +411,13 @@ int reduceRPar() {
   }
 
   if(prevNode->type == NTExpression) {
-    if(prevPrevNode && prevPrevNode->type == NTTerminal &&
-       prevPrevNode->token->type == TTLPar) {
+    if(prevPrevNode && nodeIsToken(prevPrevNode, TTLPar)) {
       // (EXPR) -- reduce
       stackPop(3);
       stackPush(prevNode);
       reduced = 1;
     }
-  } else if(prevNode->type == NTCallParam ||
-            (prevNode->type == NTTerminal && prevNode->token->type == TTLPar)) {
+  } else if(prevNode->type == NTCallParam || nodeIsToken(prevNode, TTLPar)) {
     reduced = reduceFunctionCallExpr();
   }
 
@@ -473,7 +464,7 @@ int reduceFunctionCallSt() {
 
     stackPush(nodePtr);
     reduced = 1;
-  } else if(prevNode->type == NTTerminal && prevNode->token->type == TTLPar) {
+  } else if(nodeIsToken(prevNode, TTLPar)) {
     // ID();  -- function call statement without params
     Node* idNode = fromStackSafe(3);
 
@@ -517,7 +508,7 @@ int reduceFunctionCallExpr() {
     stackPop(2 + nParams * 2);
     stackPush(nodePtr);
     reduced = 1;
-  } else if(prevNode->type == NTTerminal && prevNode->token->type == TTLPar) {
+  } else if(nodeIsToken(prevNode, TTLPar)) {
     // ID()  -- function call without params
     Node* idNode = fromStackSafe(2);
 
@@ -539,7 +530,7 @@ int reduceIdentifier() {
      || isLiteral(laType)) 
   {
     // is function ID (will be reduced later)
-  } else if(prevNode->type == NTTerminal && prevNode->token->type == TTFunc) {
+  } else if(nodeIsToken(prevNode, TTFunc)) {
     // is function ID (will be reduced later)
   }
   else { // is variable
@@ -551,14 +542,12 @@ int reduceIdentifier() {
     {
       Node* prevPrevNode = fromStackSafe(2);
 
-      if(!prevPrevNode || prevPrevNode->type == NTProgramPart ||
-         prevPrevNode->type == NTStatement || 
-         (prevPrevNode->type == NTTerminal 
-         && prevPrevNode->token->type == TTLBrace))
+      if(!prevPrevNode || prevPrevNode->type == NTProgramPart
+         || prevPrevNode->type == NTStatement 
+         || nodeIsToken(prevPrevNode, TTLBrace))
       {
         // variable declaration, will reduce later
-      } else if(prevPrevNode->type == NTTerminal &&
-                prevPrevNode->token->type == TTFor) { 
+      } else if(nodeIsToken(prevPrevNode, TTFor)) { 
         // is part of for statement  -- do nothing
       } else { // is parameter
         stackPop(2);
@@ -594,7 +583,7 @@ int reduceExpression() {
       prevNode, astLastLeaf(prevNode));
   }
 
-  if(prevNode->type == NTTerminal && prevNode->token->type == TTLPar) {
+  if(nodeIsToken(prevNode, TTLPar)) {
     if(!prevPrevNode) { // error: beginning program with parenthesis
       // TODO: make a check for illegal beginnings so we don't have to check
       // this all the time
@@ -609,7 +598,7 @@ int reduceExpression() {
       }
     }
   }
-  else if(prevNode->type == NTTerminal && prevNode->token->type == TTComma) {
+  else if(nodeIsToken(prevNode, TTComma)) {
     if(!prevPrevNode) { // error: beginning program with parenthesis
       // TODO: make a check for illegal beginnings so we don't have to check
       // this all the time
@@ -653,36 +642,19 @@ int reduceExpression() {
           prevPrevNode, prevNode, curNode);
         reduced = 1;
       }
-    } else if(prevNode->type == NTTerminal &&
-              prevNode->token->type == TTNot) { // not EXPR
+    } else if(nodeIsToken(prevNode, TTNot)) { // not EXPR
       stackPop(2);
       Node* nodePtr = createAndPush(NTExpression, 2, prevNode, curNode);
       reduced = 1;
     } else if(laType == TTComma) { // check FOR statement
       Node* forNode = fromStackSafe(4);
 
-      if(forNode && forNode->type == NTTerminal 
-         && forNode->token->type == TTFor) {
+      if(forNode && nodeIsToken(forNode, TTFor)) {
         Node* typeNode = fromStackSafe(3);
 
-        assertEqual(typeNode, NTType, "");
-        assertEqual(prevPrevNode, NTIdentifier, "");
-        assertTokenEqual(prevNode, TTAssign, "");
-
-/*
-        if(typeNode->type != NTType) { // error
-          parsErrorHelper("Expected type, found %s.",
-            typeNode, astFirstLeaf(typeNode));
-        }
-        if(prevPrevNode->type != NTIdentifier) { // error
-          parsErrorHelper("Expected identifier, found %s.",
-            prevPrevNode, astFirstLeaf(prevPrevNode));
-        }
-        if(prevNode->type != NTTerminal || 
-           prevNode->token->type != TTAssign) { // error
-          parsErrorHelper("Expected symbol '=', found %s.",
-            prevNode, astFirstLeaf(prevNode));
-        }*/
+        assertEqual(typeNode, NTType, "Bad 'for' statement.");
+        assertEqual(prevPrevNode, NTIdentifier, "Bad 'for' statement.");
+        assertTokenEqual(prevNode, TTAssign, "Bad 'for' statement.");
 
         stackPop(4);
         Node* nodePtr = createAndPush(NTDeclaration, 3, 
@@ -690,14 +662,11 @@ int reduceExpression() {
         reduced = 1;
       }
     } else if(laType == TTColon) { // EXPR in WHILE, IF, MATCH or FOR
-      if(prevNode && prevNode->type == NTTerminal &&
-         prevNode->token->type == TTWhile) { // while EXPR :
+      if(prevNode && nodeIsToken(prevNode, TTWhile)) { // while EXPR :
         // do nothing
-      } else if(prevNode && prevNode->type == NTTerminal &&
-                prevNode->token->type == TTIf) { // if EXPR :
+      } else if(prevNode && nodeIsToken(prevNode, TTIf)) { // if EXPR :
       } else if(prevNode && (prevNode->type == NTMatchClause ||
-                (prevNode->type == NTTerminal &&
-                prevNode->token->type == TTLBrace))) {
+                nodeIsToken(prevNode, TTLBrace))) {
       } else { // for DECL , EXPR , ... EXPR :
         Node* assignNode = fromStackSafe(1);
         Node* varNode = fromStackSafe(2);
@@ -819,8 +788,8 @@ int reduceSemi() {
             parsError(str, problematic->token->lnum, problematic->token->chnum);
           } 
           else if(prev4->type == NTProgramPart || prev4->type == NTStatement
-            || (prev4->type == NTTerminal && (prev4->token->type == TTColon ||
-            prev4->token->type == TTElse || prev4->token->type == TTLBrace))) 
+            || (nodeIsToken(prev4, TTColon) || nodeIsToken(prev4, TTElse) ||
+            nodeIsToken(prev4, TTLBrace))) 
           {
             // ID ASSIGN_OP EXPR ;  -- assignment
             stackPop(4);
@@ -896,24 +865,5 @@ int canPrecedeStatement(Node* node) {
       return 1;
   }
   return 0;
-}
-
-void checkTree(Node* node) {
-  int id = node->id;
-  int type = node->type;
-  int nChildren = node->nChildren;
-
-  if(id < 0 || id > parserState.nodeCount)
-    genericError("Internal memory error.");
-
-  //printf("ID: %d, type: %d, nch: %d\n", node->id, 
-  //  node->type, node->nChildren);
-
-  for(int i = 0; i < node->nChildren; i++) {
-    Node* chnode = node->children[i];
-    //printf("ch[%d]: ID: %d, type: %d, nch: %d\n", i, chnode->id, 
-    //  chnode->type, chnode->nChildren);
-  }
-  for(int i = 0; i < node->nChildren; i++) checkTree(node->children[i]);
 }
 

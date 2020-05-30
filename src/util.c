@@ -44,6 +44,17 @@ int isExprTerminator(TokenType type) {
   return 0; 
 }
 
+int nodeIsToken(Node* node, TokenType type) {
+  if(!node) genericError("Internal error: AST node is NULL.");
+  if(node->type == NTTerminal) { 
+    if(!node->token) {
+      genericError("Internal error: corrupted AST node.");
+    }
+    if(node->token->type == type) return 1;
+  }
+  return 0;
+}
+
 void printTokenInFile(FILE* file, char* filename, Token token) {
   rewind(file);
 

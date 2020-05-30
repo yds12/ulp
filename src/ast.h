@@ -11,5 +11,8 @@ Node* astLastLeaf(Node* ast);
 // Prints the AST in GraphViz format
 void graphvizAst(Node* ast);
 
+// Checks if the AST looks healthy (memory-wise)
+void checkTree(Node* node, int nodeCount);
+
 #endif
 

@@ -85,6 +85,8 @@ int precedence(TokenType type);
  */
 int isExprTerminator(TokenType type);
 
+int nodeIsToken(Node* node, TokenType type);
+
 void genericError(char* msg);
 
 void strReplaceTokenName(char* str, char* format, TokenType ttype);
