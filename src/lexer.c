@@ -96,7 +96,7 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
     .filename = sourcefilename,
     .lastChar = '\0',
     .lnum = 1,
-    .chnum = 1,
+    .chnum = 0,
     .nTokens = 0, // number of tokens processed so far
     .tokens = NULL
   };
@@ -130,6 +130,8 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
       lexError(str);
     }
   }
+
+  printTokens();
 }
 
 void eatIDKW()

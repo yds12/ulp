@@ -102,5 +102,7 @@ int isSingleCharToken(char character);
  */
 int startsDoubleOp(char character);
 
+void printTokens();
+
 #endif
 

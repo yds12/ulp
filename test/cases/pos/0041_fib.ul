@@ -1,0 +1,7 @@
+
+fn fibonacci int pos => {
+  if pos < 1: return -1; // error!
+  if pos <= 2: return 1;
+  return fibonacci(pos - 1) + fibonacci(pos - 2);
+}
+

@@ -1,5 +1,7 @@
 
+#include <stdlib.h>
 #include "util.h"
+#include "cli.h"
 
 int isLiteral(TokenType type) {
   if(type == TTLitInt || type == TTLitFloat || type == TTLitString ||
@@ -132,6 +134,11 @@ void strReplaceNodeAndTokenName(char* str, char* format, Node* node) {
   } else strReplaceNodeName(str, format, type); 
 }
 
+void genericError(char* msg) {
+  if(cli.outputType <= OUT_DEFAULT) printf("ERROR: %s\n", msg);
+  exit(1);
+}
+
 void strReplaceTokenName(char* str, char* format, TokenType ttype) {
   switch(ttype) {
     case TTId: sprintf(str, format, "identifier"); break;
@@ -241,6 +248,10 @@ void strReplaceNodeName(char* str, char* format, NodeType type) {
       break;
     case NTParams: sprintf(str, format, "declaration of parameters");
       break;
+    case NTForSt: sprintf(str, format, "'for' statement");
+      break;
+    case NTCallSt: sprintf(str, format, "function call statement");
+      break;
     default: sprintf(str, format, "NT");
       break;
   }
@@ -301,6 +312,10 @@ void strReplaceNodeAbbrev(char* str, char* format, Node* node) {
     case NTReturnSt: sprintf(str, format, "RET st");
       break;
     case NTParams: sprintf(str, format, "PARAMS");
+      break;
+    case NTForSt: sprintf(str, format, "FOR");
+      break;
+    case NTCallSt: sprintf(str, format, "CALL st");
       break;
     default: sprintf(str, format, "NT");
       break;

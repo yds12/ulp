@@ -64,3 +64,14 @@ void lexError(char* msg) {
     lexerState.lnum, lexerState.chnum);
   exit(1);
 }
+
+void printTokens() {
+  if(cli.outputType != OUT_DEBUG) return;
+
+  for(int i = 0; i < lexerState.nTokens; i++) {
+    Token t = lexerState.tokens[i];
+    printf("\n\n||%s||, type:%d, pos:%d,%d\n", t.name, t.type, t.lnum, t.chnum);
+    printTokenInFile(lexerState.file, lexerState.filename, t);
+  }
+}
+

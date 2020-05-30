@@ -1,0 +1,26 @@
+
+for int i = 0, i < 100, i++: {
+  printi fibonacci(i); // print integer (it is not decided yet which 
+                       // built-in functions like this one will exist)
+  print "\n";
+}
+
+fn fibonacci int pos => {
+  if pos < 1: return -1; // error!
+  if pos <= 2: return 1;
+  return fibonacci(pos - 1) + fibonacci(pos - 2);
+}
+
+int x = 32 * 4;
+int y = 7;
+x = y + x;
+y++;
+
+loop {
+  x += 10;
+
+  if x > 1000: break;
+}
+
+string s = "hello";
+

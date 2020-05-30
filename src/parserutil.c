@@ -9,6 +9,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include "cli.h"
 #include "util.h"
 #include "parser.h"
@@ -24,16 +25,25 @@ void initializeStack() {
     .maxSize = INITIAL_STACK_SIZE
   };
 
-  nodeCount = 0;
-  maxNodes = INITIAL_MAX_NODES;
-  pNodes = (Node*) malloc(sizeof(Node) * maxNodes);
+  parserState.nodeCount = 0;
+  parserState.maxNodes = INITIAL_MAX_NODES;
+  pNodes = (Node*) malloc(sizeof(Node) * parserState.maxNodes);
   pStack.nodes = (Node**) malloc(INITIAL_STACK_SIZE * sizeof(Node*));
 }
 
-Node* createAndPush(NodeType type, int nChildren) {
+Node* createAndPush(NodeType type, int nChildren, ...) {
   Node* nodePtr = newNode(type);
   if(nChildren > 0) allocChildren(nodePtr, nChildren);
   stackPush(nodePtr);
+
+  va_list nodePtrArgs;
+  va_start(nodePtrArgs, nChildren);
+
+  for(int i = 0; i < nChildren; i++) {
+    nodePtr->children[i] = va_arg(nodePtrArgs, Node*);
+  }
+  va_end(nodePtrArgs);
+
   return nodePtr;
 }
 
@@ -44,15 +54,15 @@ Node* newNode(NodeType type) {
     .children = NULL
   };
 
-  if(nodeCount >= maxNodes) {
-    pNodes = (Node*) realloc(pNodes, sizeof(Node) * maxNodes * 2);
-    maxNodes *= 2;
+  if(parserState.nodeCount >= parserState.maxNodes) {
+    pNodes = (Node*) realloc(pNodes, sizeof(Node) * parserState.maxNodes * 2);
+    parserState.maxNodes *= 2;
   }
 
-  pNodes[nodeCount] = node;
-  pNodes[nodeCount].id = nodeCount;
-  nodeCount++;
-  return &pNodes[nodeCount - 1];
+  pNodes[parserState.nodeCount] = node;
+  pNodes[parserState.nodeCount].id = parserState.nodeCount;
+  parserState.nodeCount++;
+  return &pNodes[parserState.nodeCount - 1];
 }
 
 void stackPush(Node* node) {
@@ -84,6 +94,8 @@ Token lookAhead() {
 void allocChildren(Node* node, int nChildren) {
   node->children = (Node**) malloc(sizeof(Node*) * nChildren);
   node->nChildren = nChildren;
+  
+  for(int i = 0; i < nChildren; i++) node->children[i] = NULL;
 }
 
 Node* fromStackSafe(int offset) {
@@ -105,10 +117,22 @@ int isAssignmentOp(TokenType type) {
   return 0;
 }
 
-void assertTokenEqual(Node* node, TokenType ttype) {
+void assertTokenEqual(Node* node, TokenType ttype, char* msg) {
   if(node->type != NTTerminal) {
-    parsErrorHelper("Expected symbol, found %s.",
-      node, astFirstLeaf(node));
+    char* dfMsg = " Expected symbol, found %s.";
+    char* finalMsg = (char*) malloc(
+      sizeof(char) * (strlen(msg) + strlen(dfMsg) + MAX_NODE_NAME));
+    char* format = (char*) malloc(
+      sizeof(char) * (strlen(msg) + strlen(dfMsg)));
+
+    strcpy(format, msg);
+    strcat(format, dfMsg);
+    strReplaceNodeName(finalMsg, format, node->type);
+
+    Node* leafNode = astFirstLeaf(node);
+    int lnum = leafNode->token->lnum;
+    int chnum = leafNode->token->chnum;
+    parsError(finalMsg, lnum, chnum);
   } else if(!(node->token)) {
     Node* problematic = astFirstLeaf(node);
 
@@ -117,35 +141,51 @@ void assertTokenEqual(Node* node, TokenType ttype) {
     }
     exit(1);
   } else if(node->token->type != ttype) {
-    char* format = "%s";
+    char* dfMsg = " Expected %s, found %s.";
+    char* finalMsg = (char*) malloc(
+      sizeof(char) * (strlen(msg) + strlen(dfMsg) + 2 * MAX_NODE_NAME));
+    char* format = (char*) malloc(
+      sizeof(char) * (strlen(msg) + strlen(dfMsg)));
+
+    strcpy(format, msg);
+    strcat(format, dfMsg);
+
+    char* fmtName = "%s";
     char strWrong[MAX_NODE_NAME];
     char strExpect[MAX_NODE_NAME];
-    strReplaceTokenName(strWrong, format, node->token->type);
-    strReplaceTokenName(strExpect, format, ttype);
-    char* msgFormat = "Expected %s, found %s.";
-    char finalString[strlen(msgFormat) + MAX_NODE_NAME * 2]; 
-    sprintf(finalString, msgFormat, strExpect, strWrong);
+    strReplaceTokenName(strWrong, fmtName, node->token->type);
+    strReplaceTokenName(strExpect, fmtName, ttype);
+    sprintf(finalMsg, format, strExpect, strWrong);
 
-    Node* problematic = astFirstLeaf(node);
-    parsError(finalString, problematic->token->lnum, 
-      problematic->token->chnum);
+    Node* leafNode = astFirstLeaf(node);
+    int lnum = leafNode->token->lnum;
+    int chnum = leafNode->token->chnum;
+    parsError(finalMsg, lnum, chnum);
   }
 }
 
-void assertEqual(Node* node, NodeType type) {
+void assertEqual(Node* node, NodeType type, char* msg) {
   if(node->type != type) {
-    char* format = "%s";
+    char* dfMsg = " Expected %s, found %s.";
+    char* finalMsg = (char*) malloc(
+      sizeof(char) * (strlen(msg) + strlen(dfMsg) + 2 * MAX_NODE_NAME));
+    char* format = (char*) malloc(
+      sizeof(char) * (strlen(msg) + strlen(dfMsg)));
+
+    strcpy(format, msg);
+    strcat(format, dfMsg);
+
+    char* fmtName = "%s";
     char strWrong[MAX_NODE_NAME];
     char strExpect[MAX_NODE_NAME];
-    strReplaceNodeAndTokenName(strWrong, format, node);
-    strReplaceNodeName(strExpect, format, type);
-    char* msgFormat = "Expected %s, found %s.";
-    char finalString[strlen(msgFormat) + MAX_NODE_NAME * 2]; 
-    sprintf(finalString, msgFormat, strExpect, strWrong);
+    strReplaceNodeAndTokenName(strWrong, fmtName, node);
+    strReplaceNodeName(strExpect, fmtName, type);
+    sprintf(finalMsg, format, strExpect, strWrong);
 
-    Node* problematic = astFirstLeaf(node);
-    parsError(finalString, problematic->token->lnum, 
-      problematic->token->chnum);
+    Node* leafNode = astFirstLeaf(node);
+    int lnum = leafNode->token->lnum;
+    int chnum = leafNode->token->chnum;
+    parsError(finalMsg, lnum, chnum);
   }
 }
 

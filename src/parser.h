@@ -21,6 +21,8 @@ typedef struct stParserState {
   int nextToken;
   int nTokens;  // from lexerState
   Token* tokens;  // from lexerState
+  int maxNodes;  // current size of the list of nodes
+  int nodeCount;  // number of nodes created so far
 } ParserState;
 
 // Global state of the parser
@@ -32,19 +34,13 @@ ParserStack pStack;
 // The list of nodes that comprise the trees
 Node* pNodes;
 
-// Current size of the list of nodes
-int maxNodes;
-
-// Number of nodes created so far
-int nodeCount;
-
 void parserStart();
 
 void initializeStack();
 
 Node* newNode(NodeType type);
 
-Node* createAndPush(NodeType type, int nChildren);
+Node* createAndPush(NodeType type, int nChildren, ...);
 
 void stackPush(Node* node);
 
@@ -60,9 +56,9 @@ int isSubStatement(NodeType type);
 
 int isAssignmentOp(TokenType type);
 
-void assertTokenEqual(Node* node, TokenType ttype);
+void assertTokenEqual(Node* node, TokenType ttype, char* msg);
 
-void assertEqual(Node* node, NodeType type);
+void assertEqual(Node* node, NodeType type, char* msg);
 
 void parsErrorHelper(char* format, Node* node, Node* leafNode);
 

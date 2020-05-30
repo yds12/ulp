@@ -49,7 +49,11 @@ void graphvizAstRec(Node* node) {
   char nodeName[len];
   strReplaceNodeAbbrev(nodeName, format, node); 
 
-  printf("%d [label=\"%s\"];\n", node->id, nodeName);
+  if(node->type == NTTerminal && node->token->type == TTLitString)
+    printf("%d [label=%s];\n", node->id, nodeName);
+  else 
+    printf("%d [label=\"%s\"];\n", node->id, nodeName);
+
   for(int i = 0; i < node->nChildren; i++) {
     printf("%d -> %d;\n", node->id, node->children[i]->id);
     graphvizAstRec(node->children[i]);
