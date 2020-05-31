@@ -123,31 +123,45 @@ void printScopeNodes(Node* node) {
 }
 
 void resolveScope(Node* node) {
-  if(node->type == NTDeclaration) {
-    if(node->nChildren < 2) {
-      genericError("Compiler bug: incomplete declaration AST node.");
+  if(node->type == NTIdentifier) {
+    if(!node->parent) 
+      genericError("Compiler bug: AST node missing parent.");
+
+    Node* scopeNode = node;
+    Node* parent = node->parent;
+    SymbolType stype;
+
+    // variable in expression/assignment statement
+    if(parent->type == NTExpression || parent->type == NTAssignment
+       || parent->type == NTCallExpr || parent->type == NTCallSt) return; 
+
+    if(parent->type == NTFunction) { // function name
+      stype = STFunction;
+    } else if(parent->type == NTDeclaration) { // variable name
+      Node* ppNode = parent->parent;
+
+      if(!ppNode) 
+        genericError("Compiler bug: AST node missing parent.");
+
+      if(ppNode->type == NTProgramPart) { // global variable
+        stype = STGlobal;
+      } else if(ppNode->type == NTStatement) { // local variable
+        stype = STLocal;
+      }
+
+    } else if(parent->type == NTArg) { // function argument
+      stype = STArg;
+
+      if(parent->parent->parent->nChildren < 3)
+        genericError("Compiler bug: Function AST node missing statement.");
+
+      scopeNode = parent->parent->parent->children[2];
     }
 
-    Node* idNode = node->children[1];
+    if(node->nChildren < 1)
+      genericError("Compiler bug: Identifier AST node without child.");
 
-    if(idNode->type != NTIdentifier) {
-      genericError("Compiler bug: declaration AST node lacking identifier.");
-    }
-//printf("trying to add %s.\n", idNode->children[0]->token->name);
-    tryAddSymbol(node, idNode->children[0]->token, STLocal);
-
-  } else if(node->type == NTFunction) {
-    if(node->nChildren < 1) {
-      genericError("Compiler bug: incomplete declaration AST node.");
-    }
-
-    Node* idNode = node->children[0];
-
-    if(idNode->type != NTIdentifier) {
-      genericError("Compiler bug: declaration AST node lacking identifier.");
-    }
-
-    tryAddSymbol(node, idNode->children[0]->token, STLocal);
+    tryAddSymbol(scopeNode, node->children[0]->token, stype);
   }
 }
 
@@ -184,8 +198,14 @@ void printSymTable(Node* scopeNode) {
     printf("NT %d: No symtable.\n", scopeNode->type); 
     return;
   }
-  printf("NT %d: symtable %p.\n", scopeNode->type, scopeNode->symTable);
-  printf("NT %d: symtable has %d.\n", scopeNode->type, 
+//  printf("NT %d: symtable %p.\n", scopeNode->type, scopeNode->symTable);
+  printf("NT %d: symtable has %d.", scopeNode->type, 
     scopeNode->symTable->nSymbols);
+  if(scopeNode->symTable->nSymbols > 0) {
+    for(int i = 0; i < scopeNode->symTable->nSymbols; i++)
+      printf(" %s [T:%d]", scopeNode->symTable->symbols[i]->token->name,
+        scopeNode->symTable->symbols[i]->type);
+  }
+  printf("\n");
 }
 

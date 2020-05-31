@@ -257,7 +257,9 @@ void strReplaceNodeName(char* str, char* format, NodeType type) {
       break;
     case NTReturnSt: sprintf(str, format, "'return' statement");
       break;
-    case NTParams: sprintf(str, format, "declaration of parameters");
+    case NTArgList: sprintf(str, format, "declaration of parameters");
+      break;
+    case NTArg: sprintf(str, format, "function argument");
       break;
     case NTForSt: sprintf(str, format, "'for' statement");
       break;
@@ -322,7 +324,9 @@ void strReplaceNodeAbbrev(char* str, char* format, Node* node) {
       break;
     case NTReturnSt: sprintf(str, format, "RET st");
       break;
-    case NTParams: sprintf(str, format, "PARAMS");
+    case NTArgList: sprintf(str, format, "PARAMS");
+      break;
+    case NTArg: sprintf(str, format, "ARG");
       break;
     case NTForSt: sprintf(str, format, "FOR");
       break;

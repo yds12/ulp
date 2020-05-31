@@ -7,7 +7,7 @@
 
 void shift();
 int reduce();
-int reduceParam();
+int reduceArg();
 int reduceSemi();
 int reduceExpression();
 int reduceStatement();
@@ -117,8 +117,8 @@ int reduce() {
     singleParent(NTExpression);
     continueReducing = 1;
   } else if(curNode->type == NTBinaryOp) {
-  } else if(curNode->type == NTParam) {
-    continueReducing = reduceParam();
+  } else if(curNode->type == NTArg) {
+    continueReducing = reduceArg();
   } else if(curNode->type == NTIdentifier) {
     continueReducing = reduceIdentifier();
   } else if(curNode->type == NTTerminal) {
@@ -164,7 +164,7 @@ int reduce() {
   return continueReducing;
 }
 
-int reduceParam() {
+int reduceArg() {
   int reduced = 0;
   Node* prevNode = fromStackSafe(1);
   TokenType laType = lookAhead().type;
@@ -187,14 +187,14 @@ int reduceParam() {
           problematic->token->chnum);
       }
 
-      if(idNode->type == NTParam) nParams++;
+      if(idNode->type == NTArg) nParams++;
       else if(idNode->type == NTIdentifier) {
         break;
       }
       idIndex++;
     }
 
-    Node* nodePtr = newNode(NTParams);
+    Node* nodePtr = newNode(NTArgList);
     allocChildren(nodePtr, nParams);
 
     for(int i = 0; i < nParams; i++) {
@@ -373,7 +373,7 @@ int reduceStatement() {
       assertEqual(idNode, NTIdentifier, "");
 
       // create an empty params node
-      Node* paramsNode = newNode(NTParams);
+      Node* paramsNode = newNode(NTArgList);
       paramsNode->nChildren = 0;
 
       stackPop(4);
@@ -392,7 +392,7 @@ int reduceStatement() {
       Node* paramsNode = fromStackSafe(2);
       assertTokenEqual(prev4, TTFunc, "Bad function declaration.");
       assertEqual(idNode, NTIdentifier, "Bad function declaration.");
-      assertEqual(paramsNode, NTParams, "Bad function declaration.");
+      assertEqual(paramsNode, NTArgList, "Bad function declaration.");
 
       stackPop(5);
       Node* nodePtr = createAndPush(NTFunction, 3, idNode, paramsNode, curNode);
@@ -566,7 +566,7 @@ int reduceIdentifier() {
         // is part of for statement  -- do nothing
       } else { // is parameter
         stackPop(2);
-        Node* nodePtr = createAndPush(NTParam, 2, prevNode, curNode);
+        Node* nodePtr = createAndPush(NTArg, 2, prevNode, curNode);
         reduced = 1;
       }
     } else { // term

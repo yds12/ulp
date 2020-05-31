@@ -18,7 +18,7 @@ directory. For the lexer we have [`docs/lexicon.txt`](docs/lexicon.txt), and
 for the parser we have [`docs/grammar.txt`](docs/grammar.txt). For now,
 the language will just be called **ulp**, for "uma linguagem de programação".
 
-An example can be found at [`docs/sample.ulp`](docs/sample.ulp).
+Many examples can be found at the [`test/cases`](test/cases) directory.
 
 ## Roadmap
 
