@@ -85,7 +85,7 @@ Node* stackPop(int n) {
 
 Token lookAhead() {
   if(parserState.nextToken < parserState.nTokens)
-    return parserState.tokens[parserState.nextToken];
+    return *parserState.tokens[parserState.nextToken];
 
   // Ideally this function shouldn't be called if there are no tokens left.
   Token token = { NULL, 0, TTEof, 0, 0 };

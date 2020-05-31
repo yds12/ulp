@@ -24,7 +24,7 @@ void singleParent(NodeType type);
 // Checks whether a certain type can come before a statement
 int canPrecedeStatement(Node* node);
 
-void parserStart(FILE* file, char* filename, int nTokens, Token* tokens) {
+void parserStart(FILE* file, char* filename, int nTokens, Token** tokens) {
   parserState = (ParserState) { 
     .file = file, 
     .filename = filename,
@@ -58,7 +58,7 @@ void parserStart(FILE* file, char* filename, int nTokens, Token* tokens) {
 }
 
 void shift() {
-  Token* token = &parserState.tokens[parserState.nextToken];
+  Token* token = parserState.tokens[parserState.nextToken];
   parserState.nextToken++;
   Node* createdNode = createAndPush(NTTerminal, 0);
   createdNode->token = token;

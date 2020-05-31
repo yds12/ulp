@@ -34,10 +34,10 @@ void printCharInFile(FILE* file, char* filename, int lnum, int chnum);
  * file: pointer to the source file (should be open, will be rewinded and
  *   will not be closed).
  * filename: name of the source file.
- * token: the token to be printed.
+ * token: pointer to the token to be printed.
  *
  */
-void printTokenInFile(FILE* file, char* filename, Token token);
+void printTokenInFile(FILE* file, char* filename, Token* token);
 
 /*
  * Checks whether a token type is a literal type. 

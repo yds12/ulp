@@ -55,7 +55,7 @@ int nodeIsToken(Node* node, TokenType type) {
   return 0;
 }
 
-void printTokenInFile(FILE* file, char* filename, Token token) {
+void printTokenInFile(FILE* file, char* filename, Token* token) {
   rewind(file);
 
   int BUFF_SIZE = 80;
@@ -72,9 +72,9 @@ void printTokenInFile(FILE* file, char* filename, Token token) {
   while(!feof(file)) {
     char ch = fgetc(file);
 
-    if(lnum == token.lnum) {
+    if(lnum == token->lnum) {
       if(chnum < BUFF_SIZE) buff[chnum - 1] = ch;
-    } else if(lnum > token.lnum) break;
+    } else if(lnum > token->lnum) break;
 
     if(ch == '\n') {
       lnum++;
@@ -83,14 +83,14 @@ void printTokenInFile(FILE* file, char* filename, Token token) {
   }
 
   for(int i = 0; i < BUFF_SIZE; i++) {
-    if(i + 1 < token.chnum || i + 1 >= token.chnum + token.nameSize) {
+    if(i + 1 < token->chnum || i + 1 >= token->chnum + token->nameSize) {
       buff_mark[i] = ' '; 
     }
     else buff_mark[i] = '^';
   }
 
-  printf("\nToken '%s':\n", token.name);
-  printf("%s:%d:%d:\n\n", filename, token.lnum, token.chnum);
+  printf("\nToken '%s':\n", token->name);
+  printf("%s:%d:%d:\n\n", filename, token->lnum, token->chnum);
   printf("%s", buff);
   printf("%s\n", buff_mark);
 }

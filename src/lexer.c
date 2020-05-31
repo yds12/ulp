@@ -102,7 +102,7 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
   };
 
   // The list of tokens in the source file
-  lexerState.tokens = (Token*) malloc(INITIAL_MAX_TOKENS * sizeof(Token));
+  lexerState.tokens = (Token**) malloc(INITIAL_MAX_TOKENS * sizeof(Token*));
 
   // starts with the first character
   if(!feof(sourcefile)) {
@@ -370,14 +370,21 @@ void eatSlash()
 
 void addToken(int size, TokenType type, int lnum, int chnum) {
   char* tokenName = (char*) malloc((size + 1) * sizeof(char));
-  Token token = { tokenName, size, type, lnum, chnum };
+
+  Token* token = (Token*) malloc(sizeof(Token));
+  token->name = tokenName;
+  token->nameSize = size;
+  token->type = type;
+  token->lnum = lnum;
+  token->chnum = chnum;
+
   strncpy(tokenName, lexerState.buffer, size);
-  token.name[size] = '\0';
+  token->name[size] = '\0';
 
   if(lexerState.nTokens >= lexerState.maxTokens) {
     // doubles the size of the array of tokens
-    lexerState.tokens = (Token*) realloc(
-      lexerState.tokens, sizeof(Token) * lexerState.maxTokens * 2);
+    lexerState.tokens = (Token**) realloc(
+      lexerState.tokens, sizeof(Token*) * lexerState.maxTokens * 2);
 
     lexerState.maxTokens *= 2;
   }

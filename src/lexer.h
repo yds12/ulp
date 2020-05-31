@@ -22,7 +22,7 @@ typedef struct stLexerState {
   int prevLnum;
   int prevChnum;
   int nTokens;  // number of tokens processed
-  Token* tokens; // list of processed tokens
+  Token** tokens; // pointers to the processed tokens
 } LexerState;
 
 // Global state of the lexer.

@@ -20,7 +20,7 @@ typedef struct stParserState {
   char* filename;
   int nextToken;
   int nTokens;  // from lexerState
-  Token* tokens;  // from lexerState
+  Token** tokens;  // from lexerState
   int maxNodes;  // current size of the list of nodes
   int nodeCount;  // number of nodes created so far
 } ParserState;
@@ -34,7 +34,7 @@ ParserStack pStack;
 // The list of pointers to the nodes that comprise the trees
 Node** pNodes;
 
-void parserStart();
+void parserStart(FILE* file, char* filename, int nTokens, Token** tokens);
 
 void initializeStack();
 
