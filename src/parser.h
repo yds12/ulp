@@ -31,8 +31,8 @@ ParserState parserState;
 // The stack of subtrees of the LR parser
 ParserStack pStack;
 
-// The list of nodes that comprise the trees
-Node* pNodes;
+// The list of pointers to the nodes that comprise the trees
+Node** pNodes;
 
 void parserStart();
 

@@ -37,7 +37,8 @@ Node* astLastLeaf(Node* ast) {
 void graphvizAst(Node* ast) {
   if(cli.outputType != OUT_GRAPHVIZ) return;
 
-  printf("digraph G {\n");
+//  printf("digraph G {\n");
+  printf("digraph G%d {\n", ast->id);
   graphvizAstRec(ast);
   printf("}");
   printf("\n");

@@ -27,7 +27,7 @@ void initializeStack() {
 
   parserState.nodeCount = 0;
   parserState.maxNodes = INITIAL_MAX_NODES;
-  pNodes = (Node*) malloc(sizeof(Node) * parserState.maxNodes);
+  pNodes = (Node**) malloc(sizeof(Node*) * parserState.maxNodes);
   pStack.nodes = (Node**) malloc(INITIAL_STACK_SIZE * sizeof(Node*));
 }
 
@@ -48,21 +48,20 @@ Node* createAndPush(NodeType type, int nChildren, ...) {
 }
 
 Node* newNode(NodeType type) {
-  Node node = { 
-    .type = type, 
-    .token = NULL, 
-    .children = NULL
-  };
+  Node* node = (Node*) malloc(sizeof(Node));
+  node->type = type;
+  node->token = NULL;
+  node->children = NULL;
 
   if(parserState.nodeCount >= parserState.maxNodes) {
-    pNodes = (Node*) realloc(pNodes, sizeof(Node) * parserState.maxNodes * 2);
+    pNodes = (Node**) realloc(pNodes, sizeof(Node*) * parserState.maxNodes * 2);
     parserState.maxNodes *= 2;
   }
 
   pNodes[parserState.nodeCount] = node;
-  pNodes[parserState.nodeCount].id = parserState.nodeCount;
+  pNodes[parserState.nodeCount]->id = parserState.nodeCount;
   parserState.nodeCount++;
-  return &pNodes[parserState.nodeCount - 1];
+  return pNodes[parserState.nodeCount - 1];
 }
 
 void stackPush(Node* node) {
@@ -77,7 +76,9 @@ void stackPush(Node* node) {
 }
 
 Node* stackPop(int n) {
-  Node* node = pStack.nodes[pStack.pointer - (n - 1)];
+  Node* node = NULL;
+  if(n >= 0) node = pStack.nodes[pStack.pointer - (n - 1)];
+
   pStack.pointer -= n;
   return node;
 }

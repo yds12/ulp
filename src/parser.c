@@ -37,12 +37,16 @@ void parserStart(FILE* file, char* filename, int nTokens, Token* tokens) {
 
   while(parserState.nextToken < parserState.nTokens) {
     shift();
-    int success = 0;
+    int continueReducing = 0;
 
     do {
       printStack();  
-      success = reduce(); 
-    } while(success);
+
+//for(int i = 0; i <= pStack.pointer; i++)
+//checkTree(fromStackSafe(i), parserState.nodeCount);
+
+      continueReducing = reduce(); 
+    } while(continueReducing);
   }
 
   if(pStack.pointer > 0 || fromStackSafe(0)->type != NTProgram) {
@@ -65,80 +69,80 @@ int reduce() {
   Node* prevNode = fromStackSafe(1);
   TokenType laType = lookAhead().type;
 
-  int reduced = 0;
+  int continueReducing = 0;
 
   if(curNode->type == NTProgramPart) {
     if(laType == TTEof) {
       reduceRoot();
-      reduced = 1;
+      return 0; // finished!
     }
   } else if(curNode->type == NTStatement) {
-    reduced = reduceStatement();
+    continueReducing = reduceStatement();
   } else if(curNode->type == NTFunction) {
     singleParent(NTProgramPart);
-    reduced = 1;
+    continueReducing = 1;
   } else if(curNode->type == NTDeclaration) {
     if(!prevNode || prevNode->type == NTProgramPart) {
       // independent declaration
       singleParent(NTProgramPart);
-      reduced = 1;
+      continueReducing = 1;
     } else if(prevNode->type == NTStatement 
               || nodeIsToken(prevNode, TTLBrace)) {
       // independent declaration in block
       singleParent(NTStatement);
-      reduced = 1;
+      continueReducing = 1;
     } else { // declaration part of FOR statement -- do nothing
     }
   } else if(isSubStatement(curNode->type)) {
     // Substatements: NTIfSt, NTNoop, NTNextSt, NTBreakSt, NTWhileSt,
     // NTMatchSt, NTLoopSt. 
     singleParent(NTStatement);
-    reduced = 1;
+    continueReducing = 1;
   } else if(curNode->type == NTExpression) {
-    reduced = reduceExpression();
+    continueReducing = reduceExpression();
   } else if(curNode->type == NTCallExpr) {
     if(!prevNode || prevNode->type == NTStatement
        || prevNode->type == NTProgramPart) { // TODO call statement (WRONG!)
       singleParent(NTStatement);
-      reduced = 1;
+      continueReducing = 1;
     } else { // call expression 
       singleParent(NTExpression);
-      reduced = 1;
+      continueReducing = 1;
     }
   } else if(curNode->type == NTTerm) {
     singleParent(NTExpression);
-    reduced = 1;
+    continueReducing = 1;
   } else if(curNode->type == NTLiteral) {
     singleParent(NTExpression);
-    reduced = 1;
+    continueReducing = 1;
   } else if(curNode->type == NTBinaryOp) {
   } else if(curNode->type == NTParam) {
-    reduced = reduceParam();
+    continueReducing = reduceParam();
   } else if(curNode->type == NTIdentifier) {
-    reduced = reduceIdentifier();
+    continueReducing = reduceIdentifier();
   } else if(curNode->type == NTTerminal) {
     TokenType ttype = curNode->token->type;
 
     if(isBinaryOp(ttype)) {
       singleParent(NTBinaryOp);
-      reduced = 1;
+      continueReducing = 1;
     } else if(isLiteral(ttype)) {
       singleParent(NTLiteral);
-      reduced = 1;
+      continueReducing = 1;
     } else if(isType(ttype)) {
       singleParent(NTType);
-      reduced = 1;
+      continueReducing = 1;
     } else if(ttype == TTId) {
       singleParent(NTIdentifier);
-      reduced = 1;
+      continueReducing = 1;
     } else if(ttype == TTBreak) { // wait next shift
     } else if(ttype == TTNext) { // wait next shift
     } else if(ttype == TTRPar) {
-      reduced = reduceRPar();
+      continueReducing = reduceRPar();
     } else if(ttype == TTSemi) {
-      reduced = reduceSemi();
+      continueReducing = reduceSemi();
     } else if(ttype == TTRBrace) {
-      reduced = reduceRBrace();
+      continueReducing = reduceRBrace();
     } else if((ttype == TTIncr || ttype == TTDecr) && laType == TTColon) {
       // ID++:   or   ID--:   in FOR statement 
       if(!prevNode) {
@@ -152,11 +156,11 @@ int reduce() {
 
       stackPop(2);
       Node* nodePtr = createAndPush(NTAssignment, 2, prevNode, curNode);
-      reduced = 1;
+      continueReducing = 1;
     }
   }
 
-  return reduced;
+  return continueReducing;
 }
 
 int reduceParam() {
@@ -828,6 +832,8 @@ int reduceSemi() {
   return reduced;
 }
 
+#include <stdlib.h>
+
 void reduceRoot() {
   for(int i = 0; i <= pStack.pointer; i++) {
     if(pStack.nodes[i]->type != NTProgramPart) {
@@ -841,7 +847,7 @@ void reduceRoot() {
   allocChildren(nodePtr, pStack.pointer + 1);
 
   for(int i = 0; i <= pStack.pointer; i++) {
-    nodePtr->children[i] = pStack.nodes[i];
+    nodePtr->children[i] = fromStackSafe(pStack.pointer - i);
   }
 
   stackPop(pStack.pointer + 1);
