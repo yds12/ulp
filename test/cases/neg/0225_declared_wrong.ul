@@ -1,0 +1,3 @@
+int sum = 0;
+
+int y = sum(0, 3);

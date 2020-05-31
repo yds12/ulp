@@ -10,15 +10,15 @@
 #define MAX_INITIAL_SYMBOLS 10
 
 void tryAddSymbol(Node* scopeNode, Token* token, SymbolType type);
-short lookupSymbol(Node* scopeNode,Token* symToken);
+Symbol* lookupSymbol(Node* scopeNode,Token* symToken);
 void resolveScope(Node* node);
-void printScopeNodes(Node* node);
-short hasSymbol(Node* scopeNode, Token* symToken);
+Symbol* findSymbol(Node* scopeNode, Token* symToken);
 void scoperError(char* msg, int lnum, int chnum);
 Node* getImmediateScope(Node* node);
 SymbolTable* createSymTable(Node* scopeNode);
 void addSymbol(Node* scopeNode, Symbol symbol);
 void printSymTable(Node* scopeNode);
+void hoistFunctions(Node* ast);
 
 // Only the program and statement blocks have scope
 int bearsScope(Node* node);
@@ -32,14 +32,15 @@ void scopeCheckerStart(FILE* file, char* filename, Node* ast) {
   if(cli.outputType <= OUT_DEBUG)
     printf("Starting scope checking...\n");
 
+  hoistFunctions(ast);
   postorderTraverse(ast, &resolveScope);
 }
 
 void tryAddSymbol(Node* node, Token* token, SymbolType type) {
   Symbol newSym = { token, type }; 
-  char exists = lookupSymbol(node, token);
+  Symbol* oldSym = lookupSymbol(node, token);
 
-  if(exists) {
+  if(oldSym) {
     char* fmt = "Redeclaration of '%s'.";
     char msg[strlen(fmt) + token->nameSize];
     sprintf(msg, fmt, token->name);
@@ -77,33 +78,35 @@ void addSymbol(Node* scopeNode, Symbol symbol) {
   st->nSymbols++;
 }
 
-// TODO return symbol type instead of boolean
-short lookupSymbol(Node* node, Token* symToken) {
+Symbol* lookupSymbol(Node* node, Token* symToken) {
   Node* lookNode = node;
 
   while(1) {
 //printf("Searching %s in NT %d\n", symbol->token->name, lookNode->type);
     printSymTable(lookNode);
 
-    if(bearsScope(lookNode) && hasSymbol(lookNode, symToken)) return 1;
-    if(!lookNode->parent) return 0;
+    if(bearsScope(lookNode)) {
+      Symbol* sym = findSymbol(lookNode, symToken);
+      if(sym) return sym;
+    }
+    if(!lookNode->parent) return NULL;
     lookNode = lookNode->parent;
   }
 }
 
-short hasSymbol(Node* scopeNode, Token* symToken) {
-  if(!scopeNode->symTable) return 0;  // node doesn't have a symbol table
+Symbol* findSymbol(Node* scopeNode, Token* symToken) {
+  if(!scopeNode->symTable) return NULL;  // node doesn't have a symbol table
 
   SymbolTable* st = scopeNode->symTable;
-  if(st->nSymbols == 0) return 0;
+  if(st->nSymbols == 0) return NULL;
 
   for(int i = 0; i < st->nSymbols; i++) {
     Symbol* tabSymbol = st->symbols[i];
     if(tabSymbol->token->nameSize != symToken->nameSize) continue;
     if(strncmp(tabSymbol->token->name, symToken->name, 
-         symToken->nameSize) == 0) return 1;
+         symToken->nameSize) == 0) return tabSymbol;
   }
-  return 0;
+  return NULL;
 }
 
 Node* getImmediateScope(Node* node) {
@@ -114,13 +117,15 @@ Node* getImmediateScope(Node* node) {
   return getImmediateScope(node->parent);
 }
 
-void printScopeNodes(Node* node) {
-  if(cli.outputType > OUT_DEBUG) return;
+void hoistFunctions(Node* ast) {
+  for(int i = 0; i < ast->nChildren; i++) {
+    Node* fNode = ast->children[i]->children[0];
 
-  if(bearsScope(node))
-    printf("Node ID %d type %d has scope.\n", node->id, node->type);
-  else
-    printf("Node ID %d type %d has NO scope.\n", node->id, node->type);
+    if(fNode->type == NTFunction) {
+      Node* termNode = fNode->children[0]->children[0];
+      tryAddSymbol(fNode, termNode->token, STFunction);
+    }
+  }
 }
 
 void resolveScope(Node* node) {
@@ -136,19 +141,37 @@ void resolveScope(Node* node) {
        || parent->type == NTCallExpr || parent->type == NTCallSt) {
       // identifier in use  -- check if declared 
       Token* token = node->children[0]->token;
-      char exists = lookupSymbol(node, token);
+      Symbol* oldSym = lookupSymbol(node, token);
 
-      // TODO function hoisting
-      if(!exists) { // undeclared
+      if(!oldSym) { // undeclared
         char* fmt = "Use of undeclared variable or function '%s'.";
         char msg[strlen(fmt) + token->nameSize];
         sprintf(msg, fmt, token->name);
         
         scoperError(msg, token->lnum, token->chnum);
+      } else {
+        char isFunc = (parent->type == NTCallExpr || parent->type == NTCallSt);
+
+        if(isFunc && oldSym->type != STFunction) {
+          char* fmt = 
+            "'%s' has previously been declared as a variable, not a function.";
+
+          char msg[strlen(fmt) + token->nameSize];
+          sprintf(msg, fmt, token->name);
+          
+          scoperError(msg, token->lnum, token->chnum);
+        } else if(!isFunc && oldSym->type == STFunction) {
+          char* fmt = "'%s' has been declared as a function, not a variable.";
+          char msg[strlen(fmt) + token->nameSize];
+          sprintf(msg, fmt, token->name);
+          
+          scoperError(msg, token->lnum, token->chnum);
+        }
       }
     } else { // identifier in declaration
       if(parent->type == NTFunction) { // function name
-        stype = STFunction;
+        //stype = STFunction;
+        return; // functions already hoisted
       } else if(parent->type == NTDeclaration) { // variable name
         Node* ppNode = parent->parent;
 

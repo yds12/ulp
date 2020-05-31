@@ -1,0 +1,9 @@
+fn sum int a, int b => {
+  return a + b;
+}
+
+fn test_fun => { }
+
+fn sum int a => {
+  return a + 2;
+}
