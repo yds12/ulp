@@ -1,0 +1,3 @@
+int x = sum(2, 3);
+
+fn sum int a, int b => return a + b;

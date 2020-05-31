@@ -10,10 +10,10 @@
 #define MAX_INITIAL_SYMBOLS 10
 
 void tryAddSymbol(Node* scopeNode, Token* token, SymbolType type);
-short lookupSymbol(Node* scopeNode, Symbol* symbol);
+short lookupSymbol(Node* scopeNode,Token* symToken);
 void resolveScope(Node* node);
 void printScopeNodes(Node* node);
-short hasSymbol(Node* scopeNode, Symbol* symbol);
+short hasSymbol(Node* scopeNode, Token* symToken);
 void scoperError(char* msg, int lnum, int chnum);
 Node* getImmediateScope(Node* node);
 SymbolTable* createSymTable(Node* scopeNode);
@@ -37,7 +37,7 @@ void scopeCheckerStart(FILE* file, char* filename, Node* ast) {
 
 void tryAddSymbol(Node* node, Token* token, SymbolType type) {
   Symbol newSym = { token, type }; 
-  char exists = lookupSymbol(node, &newSym);
+  char exists = lookupSymbol(node, token);
 
   if(exists) {
     char* fmt = "Redeclaration of '%s'.";
@@ -77,20 +77,21 @@ void addSymbol(Node* scopeNode, Symbol symbol) {
   st->nSymbols++;
 }
 
-short lookupSymbol(Node* node, Symbol* symbol) {
+// TODO return symbol type instead of boolean
+short lookupSymbol(Node* node, Token* symToken) {
   Node* lookNode = node;
 
   while(1) {
 //printf("Searching %s in NT %d\n", symbol->token->name, lookNode->type);
     printSymTable(lookNode);
 
-    if(bearsScope(lookNode) && hasSymbol(lookNode, symbol)) return 1;
+    if(bearsScope(lookNode) && hasSymbol(lookNode, symToken)) return 1;
     if(!lookNode->parent) return 0;
     lookNode = lookNode->parent;
   }
 }
 
-short hasSymbol(Node* scopeNode, Symbol* symbol) {
+short hasSymbol(Node* scopeNode, Token* symToken) {
   if(!scopeNode->symTable) return 0;  // node doesn't have a symbol table
 
   SymbolTable* st = scopeNode->symTable;
@@ -98,9 +99,9 @@ short hasSymbol(Node* scopeNode, Symbol* symbol) {
 
   for(int i = 0; i < st->nSymbols; i++) {
     Symbol* tabSymbol = st->symbols[i];
-    if(tabSymbol->token->nameSize != symbol->token->nameSize) continue;
-    if(strncmp(tabSymbol->token->name, symbol->token->name, 
-         symbol->token->nameSize) == 0) return 1;
+    if(tabSymbol->token->nameSize != symToken->nameSize) continue;
+    if(strncmp(tabSymbol->token->name, symToken->name, 
+         symToken->nameSize) == 0) return 1;
   }
   return 0;
 }
@@ -131,37 +132,49 @@ void resolveScope(Node* node) {
     Node* parent = node->parent;
     SymbolType stype;
 
-    // variable in expression/assignment statement
     if(parent->type == NTExpression || parent->type == NTAssignment
-       || parent->type == NTCallExpr || parent->type == NTCallSt) return; 
+       || parent->type == NTCallExpr || parent->type == NTCallSt) {
+      // identifier in use  -- check if declared 
+      Token* token = node->children[0]->token;
+      char exists = lookupSymbol(node, token);
 
-    if(parent->type == NTFunction) { // function name
-      stype = STFunction;
-    } else if(parent->type == NTDeclaration) { // variable name
-      Node* ppNode = parent->parent;
+      // TODO function hoisting
+      if(!exists) { // undeclared
+        char* fmt = "Use of undeclared variable or function '%s'.";
+        char msg[strlen(fmt) + token->nameSize];
+        sprintf(msg, fmt, token->name);
+        
+        scoperError(msg, token->lnum, token->chnum);
+      }
+    } else { // identifier in declaration
+      if(parent->type == NTFunction) { // function name
+        stype = STFunction;
+      } else if(parent->type == NTDeclaration) { // variable name
+        Node* ppNode = parent->parent;
 
-      if(!ppNode) 
-        genericError("Compiler bug: AST node missing parent.");
+        if(!ppNode) 
+          genericError("Compiler bug: AST node missing parent.");
 
-      if(ppNode->type == NTProgramPart) { // global variable
-        stype = STGlobal;
-      } else if(ppNode->type == NTStatement) { // local variable
-        stype = STLocal;
+        if(ppNode->type == NTProgramPart) { // global variable
+          stype = STGlobal;
+        } else if(ppNode->type == NTStatement) { // local variable
+          stype = STLocal;
+        }
+
+      } else if(parent->type == NTArg) { // function argument
+        stype = STArg;
+
+        if(parent->parent->parent->nChildren < 3)
+          genericError("Compiler bug: Function AST node missing statement.");
+
+        scopeNode = parent->parent->parent->children[2];
       }
 
-    } else if(parent->type == NTArg) { // function argument
-      stype = STArg;
+      if(node->nChildren < 1)
+        genericError("Compiler bug: Identifier AST node without child.");
 
-      if(parent->parent->parent->nChildren < 3)
-        genericError("Compiler bug: Function AST node missing statement.");
-
-      scopeNode = parent->parent->parent->children[2];
+      tryAddSymbol(scopeNode, node->children[0]->token, stype);
     }
-
-    if(node->nChildren < 1)
-      genericError("Compiler bug: Identifier AST node without child.");
-
-    tryAddSymbol(scopeNode, node->children[0]->token, stype);
   }
 }
 
