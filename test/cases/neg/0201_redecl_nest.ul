@@ -1,0 +1,7 @@
+int i = 30;
+int x = 40;
+
+if x > i: {
+  int z = x + i;
+  int i = 4;
+}

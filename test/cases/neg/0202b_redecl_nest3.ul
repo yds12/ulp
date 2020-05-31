@@ -1,0 +1,12 @@
+int i = 4;
+int z = 3;
+
+if true: {
+  int b = i + z;
+
+  if b > 4: {
+    int w = 0;
+    int b = 2;
+    w = i + w;
+  }
+}

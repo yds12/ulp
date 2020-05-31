@@ -1,0 +1,6 @@
+int i;
+
+fn func => {
+  int i = 3;
+  return;
+}

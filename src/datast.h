@@ -127,6 +127,12 @@ typedef struct stSymbol {
   short type;  // type of symbol
 } Symbol;
 
+typedef struct stSymbolTable {
+  Symbol** symbols;
+  int nSymbols;
+  int maxSize;
+} SymbolTable;
+
 // Represents a node of the Abstract Syntax Tree (AST)
 typedef struct stNode {
   NodeType type;
@@ -135,7 +141,7 @@ typedef struct stNode {
   int nChildren;
   int id;
   struct stNode* parent;
-  Symbol** symTable;  // symbol table (if this is a scope-bearing node)
+  SymbolTable* symTable;
 } Node;
 
 #endif
