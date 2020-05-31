@@ -65,21 +65,27 @@ void checkTree(Node* node, int nodeCount) {
   int id = node->id;
   int type = node->type;
   int nChildren = node->nChildren;
+  Node* parent = node->parent;
+
+  if(node->type != NTProgram && !node->parent) {
+printf("type: %d, id: %d\n", node->type, node->id);
+    genericError("Internal error: non-root AST node without parent.");
+  }
 
   if(id < 0 || id > nodeCount)
     genericError("Internal memory error.");
 
-  if(cli.outputType == OUT_DEBUG) {
-    printf("ID: %d, type: %d, nch: %d\n", node->id, 
-      node->type, node->nChildren);
-  }
+//  if(cli.outputType == OUT_DEBUG) {
+//    printf("ID: %d, type: %d, nch: %d\n", node->id, 
+//      node->type, node->nChildren);
+//  }
 
   for(int i = 0; i < node->nChildren; i++) {
     Node* chnode = node->children[i];
-    if(cli.outputType == OUT_DEBUG) {
-      printf("ch[%d]: ID: %d, type: %d, nch: %d\n", i, chnode->id, 
-        chnode->type, chnode->nChildren);
-    }
+//    if(cli.outputType == OUT_DEBUG) {
+//      printf("ch[%d]: ID: %d, type: %d, nch: %d\n", i, chnode->id, 
+//        chnode->type, chnode->nChildren);
+//    }
   }
   for(int i = 0; i < node->nChildren; i++) 
     checkTree(node->children[i], nodeCount);

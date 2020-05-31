@@ -118,6 +118,7 @@ typedef enum stNodeType {
 typedef struct stNode {
   NodeType type;
   Token* token;
+  struct stNode* parent;
   struct stNode** children;
   int nChildren;
   int id;

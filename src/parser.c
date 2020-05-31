@@ -41,13 +41,11 @@ void parserStart(FILE* file, char* filename, int nTokens, Token** tokens) {
 
     do {
       printStack();  
-
-//for(int i = 0; i <= pStack.pointer; i++)
-//checkTree(fromStackSafe(i), parserState.nodeCount);
-
       continueReducing = reduce(); 
     } while(continueReducing);
   }
+
+  printStack();  
 
   if(pStack.pointer > 0 || fromStackSafe(0)->type != NTProgram) {
     genericError("Failed to completely parse program.");
@@ -196,8 +194,10 @@ int reduceParam() {
     Node* nodePtr = newNode(NTParams);
     allocChildren(nodePtr, nParams);
 
-    for(int i = 0; i < nParams; i++)
+    for(int i = 0; i < nParams; i++) {
       nodePtr->children[i] = fromStackSafe(idIndex - (i * 2 + 1));
+      nodePtr->children[i]->parent = nodePtr;
+    }
 
     stackPop(1 + (nParams - 1) * 2); 
     stackPush(nodePtr);
@@ -237,8 +237,10 @@ int reduceRBrace() {
     Node* nodePtr = newNode(NTStatement);
     allocChildren(nodePtr, nStatements);
 
-    for(int i = 0; i < nStatements; i++)
+    for(int i = 0; i < nStatements; i++) {
       nodePtr->children[i] = fromStackSafe(lbraceIdx - (i + 1));
+      nodePtr->children[i]->parent = nodePtr;
+    }
 
     stackPop(nStatements + 2); 
     stackPush(nodePtr);
@@ -458,9 +460,12 @@ int reduceFunctionCallSt() {
     Node* nodePtr = newNode(NTCallSt);
     allocChildren(nodePtr, nParams + 1);
     nodePtr->children[0] = idNode;
+    nodePtr->children[0]->parent = nodePtr;
 
-    for(int i = 1; i <= nParams; i++)
+    for(int i = 1; i <= nParams; i++) {
       nodePtr->children[i] = fromStackSafe(idIndex - 1 - (i - 1) * 2);
+      nodePtr->children[i]->parent = nodePtr;
+    }
 
     // we know there is at least one param
     // ID PARAM [, PARAM] ;
@@ -505,9 +510,12 @@ int reduceFunctionCallExpr() {
     Node* nodePtr = newNode(NTCallExpr);
     allocChildren(nodePtr, nParams + 1);
     nodePtr->children[0] = idNode;
+    nodePtr->children[0]->parent = nodePtr;
 
-    for(int i = 1; i <= nParams; i++)
+    for(int i = 1; i <= nParams; i++) {
       nodePtr->children[i] = fromStackSafe(idIndex - i * 2);
+      nodePtr->children[i]->parent = nodePtr;
+    }
 
     stackPop(2 + nParams * 2);
     stackPush(nodePtr);
@@ -630,7 +638,7 @@ int reduceExpression() {
   else if(isExprTerminator(laType)) {
     if(prevNode->type == NTBinaryOp) {
       if(prevPrevNode && prevPrevNode->type != NTExpression) {
-        if(prevNode->children[0]->token->type == TTMinus) { // - EXPR
+        if(nodeIsToken(prevNode->children[0], TTMinus)) { // - EXPR
           stackPop(2);
           Node* nodePtr = createAndPush(NTExpression, 2, prevNode, curNode);
           reduced = 1;
@@ -709,7 +717,7 @@ int reduceExpression() {
   } else if(isBinaryOp(laType)) {
     if(prevNode->type == NTBinaryOp) {
       if(prevPrevNode && prevPrevNode->type != NTExpression) {
-        if(prevNode->children[0]->token->type == TTMinus) { // - EXPR
+        if(nodeIsToken(prevNode->children[0], TTMinus)) { // - EXPR
           stackPop(2);
           Node* nodePtr = createAndPush(NTExpression, 2, prevNode, curNode);
           reduced = 1;
@@ -848,6 +856,7 @@ void reduceRoot() {
 
   for(int i = 0; i <= pStack.pointer; i++) {
     nodePtr->children[i] = fromStackSafe(pStack.pointer - i);
+    nodePtr->children[i]->parent = nodePtr;
   }
 
   stackPop(pStack.pointer + 1);

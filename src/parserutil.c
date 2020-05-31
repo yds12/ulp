@@ -41,9 +41,9 @@ Node* createAndPush(NodeType type, int nChildren, ...) {
 
   for(int i = 0; i < nChildren; i++) {
     nodePtr->children[i] = va_arg(nodePtrArgs, Node*);
+    nodePtr->children[i]->parent = nodePtr;
   }
   va_end(nodePtrArgs);
-
   return nodePtr;
 }
 
@@ -52,6 +52,7 @@ Node* newNode(NodeType type) {
   node->type = type;
   node->token = NULL;
   node->children = NULL;
+  node->parent = NULL;
 
   if(parserState.nodeCount >= parserState.maxNodes) {
     pNodes = (Node**) realloc(pNodes, sizeof(Node*) * parserState.maxNodes * 2);
