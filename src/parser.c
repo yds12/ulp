@@ -30,7 +30,8 @@ void parserStart(FILE* file, char* filename, int nTokens, Token** tokens) {
     .filename = filename,
     .nextToken = 0,
     .nTokens = nTokens,
-    .tokens = tokens
+    .tokens = tokens,
+    .ast = NULL
   };
 
   initializeStack();
@@ -51,8 +52,10 @@ void parserStart(FILE* file, char* filename, int nTokens, Token** tokens) {
     genericError("Failed to completely parse program.");
   }
 
-  checkTree(fromStackSafe(0), parserState.nodeCount);
-  graphvizAst(fromStackSafe(0));
+  parserState.ast = fromStackSafe(0);
+
+  checkTree(parserState.ast, parserState.nodeCount);
+  graphvizAst(parserState.ast);
 }
 
 void shift() {

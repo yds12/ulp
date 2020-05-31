@@ -34,6 +34,16 @@ Node* astLastLeaf(Node* ast) {
   return lastChild;
 }
 
+void postorderTraverse(Node* node, void (*visit)(Node*)) {
+  for(int i = 0; i < node->nChildren; i++) {
+    if(!node->children[i]) 
+      genericError("Internal bug: AST node with NULL child.");
+    postorderTraverse(node->children[i], visit);
+  }
+
+  visit(node);
+}
+
 void graphvizAst(Node* ast) {
   if(cli.outputType != OUT_GRAPHVIZ) return;
 

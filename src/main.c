@@ -6,6 +6,7 @@
 #include "cli.h"
 #include "lexer.h"
 #include "parser.h"
+#include "scoper.h"
 
 /*
  * The main function should receive the source file (but it can be ommited
@@ -36,6 +37,7 @@ int main(int argc, char ** argv) {
 
   lexerStart(sourcefile, filename);
   parserStart(sourcefile, filename, lexerState.nTokens, lexerState.tokens);
+  scopeCheckerStart(sourcefile, filename, parserState.ast);
   fclose(sourcefile);
   return 0;
 }

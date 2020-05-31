@@ -83,7 +83,7 @@ typedef enum enTokenType {
   TTFalse
 } TokenType;
 
-typedef enum stNodeType {
+typedef enum enNodeType {
   NTProgram,
   NTProgramPart,
   NTStatement,
@@ -114,14 +114,29 @@ typedef enum stNodeType {
   NTTerminal,
 } NodeType;
 
+// Types of symbols
+typedef enum enSymbolType {
+  STArg,  // function argument
+  STLocal,  // local variable (in a function)
+  STGlobal,  // global variable (in root scope)
+  STFunction  // function name (also in root scope)
+} SymbolType;
+
+typedef struct stSymbol {
+  Token* token;  // holds the name of the symbol
+  short type;  // type of symbol
+} Symbol;
+
 // Represents a node of the Abstract Syntax Tree (AST)
 typedef struct stNode {
   NodeType type;
   Token* token;
-  struct stNode* parent;
   struct stNode** children;
   int nChildren;
   int id;
+  struct stNode* parent;
+  Symbol** symTable;  // symbol table (if this is a scope-bearing node)
 } Node;
 
 #endif
+

@@ -23,6 +23,7 @@ typedef struct stParserState {
   Token** tokens;  // from lexerState
   int maxNodes;  // current size of the list of nodes
   int nodeCount;  // number of nodes created so far
+  Node* ast;  // the final AST
 } ParserState;
 
 // Global state of the parser

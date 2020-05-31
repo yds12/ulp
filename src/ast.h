@@ -14,5 +14,7 @@ void graphvizAst(Node* ast);
 // Checks if the AST looks healthy (memory-wise)
 void checkTree(Node* node, int nodeCount);
 
+void postorderTraverse(Node* node, void (*visit)(Node*));
+
 #endif
 
