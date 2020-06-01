@@ -1,0 +1,7 @@
+int x = 10 - 2;
+int y = x + 3;
+int z;
+
+z = x + y;
+int w = 4;
+z += w;

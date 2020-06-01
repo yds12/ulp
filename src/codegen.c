@@ -13,6 +13,7 @@
 
 #define INITIAL_BSSSEC_LEN 30
 #define INITIAL_TEXTSEC_LEN 30
+#define MAX_INSTRUCTION_LEN 80
 
 void initializeRegisters();
 char getReg();
@@ -25,9 +26,11 @@ void allocateReg(Node* node);
 void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2);
 void appendSecBss(char* text);
 void appendSecText(char* text);
+void appendNodeCode(Node* node, char* text);
 void declareGlobalVar(char* varName, char size);
 char* getSymbolRef(Symbol* sym);
 void initializeSections();
+void finalizeSections();
 void printRegs();
 void printNodeCode(Node* node);
 void printSections();
@@ -41,6 +44,7 @@ void codegenStart(FILE* file, char* filename, Node* ast) {
   initializeRegisters();
   initializeSections();
   postorderTraverse(ast, &emitCode);
+  finalizeSections();
   printSections();
 }
 
@@ -63,7 +67,14 @@ void emitCode(Node* node) {
         appendInstruction(node, INS_MOV, 
           getRegName(node->cgData->reg), token->name);
       } else if(node->children[0]->type == NTIdentifier) {
-        Symbol* sym = lookupSymbol(node, token);
+        createCgData(node);
+        Symbol* varSym = lookupSymbol(node, token);
+
+        // load the variable in a register
+        allocateReg(node);
+        appendInstruction(node, INS_MOV,
+          getRegName(node->cgData->reg),
+          getSymbolRef(varSym));
       }
     } else if(node->nChildren == 3) {
       if(node->children[1]->type == NTBinaryOp) { // binary operation
@@ -110,6 +121,48 @@ void emitCode(Node* node) {
       freeNodeReg(node->children[2]);
     }
   }
+  else if(node->type == NTAssignment) {
+    if(node->nChildren == 3) { // declaration with assignment
+      if(!node->children[2]->cgData)
+        genericError("Code generation bug: AST node without code info.");
+
+      if(node->children[0]->nChildren < 1)
+        genericError("Code generation bug: AST identifier node without child.");
+
+      if(!node->children[0]->children[0]->token)
+        genericError("Code generation bug: AST node missing token.");
+
+      if(node->children[2]->type != NTExpression)
+        genericError("Code generation bug: expression expected.");
+
+      Token* varToken = node->children[0]->children[0]->token;
+      Symbol* varSym = lookupSymbol(node, varToken);
+      createCgData(node);
+
+      if(node->children[1]->token->type == TTAssign) {
+        appendInstruction(node, INS_MOV,
+          getSymbolRef(varSym),
+          getRegName(node->children[2]->cgData->reg));
+      }
+      else if(node->children[1]->token->type == TTAdd) {
+        allocateReg(node);
+        appendInstruction(node, INS_MOV,
+          getRegName(node->cgData->reg),
+          getSymbolRef(varSym));
+        appendInstruction(node, INS_ADD,
+          getRegName(node->cgData->reg),
+          getRegName(node->children[2]->cgData->reg));
+        appendInstruction(node, INS_MOV,
+          getSymbolRef(varSym),
+          getRegName(node->cgData->reg));
+        freeNodeReg(node);
+      }
+      else if(node->children[1]->token->type == TTSub) {
+      }
+
+      freeNodeReg(node->children[2]);
+    }
+  }
   else if(node->type == NTProgram && node->symTable) {
     for(int i = 0; i < node->symTable->nSymbols; i++) {
       if(node->symTable->symbols[i]->type == STGlobal) {
@@ -140,29 +193,25 @@ void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2) {
   if(!op1 || !op2)
     genericError("Code generation bug: empty instruction operand.");
 
-  int iLen = strlen(op1) + strlen(op2);
+  char instructionStr[MAX_INSTRUCTION_LEN];
   char* fmt;
 
   switch(inst) {
     case INS_MOV: 
       fmt = "mov %s, %s\n";
-      iLen += strlen(fmt);
-      node->cgData->code = (char*) malloc(sizeof(char) * iLen);
-      sprintf(node->cgData->code, fmt, op1, op2); 
+      sprintf(instructionStr, fmt, op1, op2); 
       break;
     case INS_ADD: 
       fmt = "add %s, %s\n";
-      iLen += strlen(fmt);
-      node->cgData->code = (char*) malloc(sizeof(char) * iLen);
-      sprintf(node->cgData->code, fmt, op1, op2); 
+      sprintf(instructionStr, fmt, op1, op2); 
       break;
     case INS_SUB: 
       fmt = "sub %s, %s\n";
-      iLen += strlen(fmt);
-      node->cgData->code = (char*) malloc(sizeof(char) * iLen);
-      sprintf(node->cgData->code, fmt, op1, op2); 
+      sprintf(instructionStr, fmt, op1, op2); 
       break;
   }
+
+  appendNodeCode(node, instructionStr);
 }
 
 void appendSecBss(char* text) {
@@ -187,6 +236,17 @@ void appendSecText(char* text) {
   strcat(codegenState.secTextCode, text);
 }
 
+void appendNodeCode(Node* node, char* text) {
+  if(strlen(node->cgData->code) + strlen(text) + 10
+     > node->cgData->maxCode) {
+    node->cgData->code = (char*) realloc(node->cgData->code,
+      sizeof(char) * node->cgData->maxCode * 2);
+    node->cgData->maxCode *= 2;
+  }
+
+  strcat(node->cgData->code, text);
+}
+
 void initializeSections() {
   codegenState.maxLenBss = INITIAL_BSSSEC_LEN;
   codegenState.maxLenText = INITIAL_TEXTSEC_LEN;
@@ -203,6 +263,12 @@ void initializeSections() {
   appendSecText("section .text\n");
   appendSecText("global _start\n");
   appendSecText("_start:\n");
+}
+
+void finalizeSections() {
+  appendSecText("mov eax, 60\n"); // exit syscall
+  appendSecText("mov edi, 0\n");
+  appendSecText("syscall\n");
 }
 
 void initializeRegisters() {
@@ -259,7 +325,8 @@ void freeReg(char regNum) {
 void createCgData(Node* node) {
   if(!node->cgData) {
     node->cgData = (CgData*) malloc(sizeof(CgData));
-    node->cgData->code = NULL;
+    node->cgData->maxCode = INITIAL_CODE_SIZE;
+    node->cgData->code = (char*) malloc(sizeof(char) * node->cgData->maxCode);
   }
 }
 
@@ -274,10 +341,12 @@ char* getSymbolRef(Symbol* sym) {
 
 void printNodeCode(Node* node) {
   if(cli.outputType > OUT_DEFAULT) return; 
+  if(cli.outputType <= OUT_DEBUG) printf("> ");
+
   if(node->cgData) {
-    printf("> %s", node->cgData->code);
+    printf("%s", node->cgData->code);
   } 
-  else printf("> \n");
+  else if(cli.outputType <= OUT_DEBUG) printf("\n");
 }
 
 void printRegs() {

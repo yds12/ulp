@@ -137,6 +137,7 @@ typedef struct stSymbolTable {
 typedef struct stCgData {
   char reg;
   char* code;
+  int maxCode;
 } CgData;
 
 // Represents a node of the Abstract Syntax Tree (AST)
