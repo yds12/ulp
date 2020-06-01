@@ -125,6 +125,7 @@ typedef enum enSymbolType {
 typedef struct stSymbol {
   Token* token;  // holds the name of the symbol
   short type;  // type of symbol
+  short argNum;  // if function argument, the position
 } Symbol;
 
 typedef struct stSymbolTable {
@@ -132,6 +133,11 @@ typedef struct stSymbolTable {
   int nSymbols;
   int maxSize;
 } SymbolTable;
+
+typedef struct stCgData {
+  char reg;
+  char* code;
+} CgData;
 
 // Represents a node of the Abstract Syntax Tree (AST)
 typedef struct stNode {
@@ -142,6 +148,7 @@ typedef struct stNode {
   int id;
   struct stNode* parent;
   SymbolTable* symTable;
+  CgData* cgData;
 } Node;
 
 #endif

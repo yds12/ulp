@@ -9,8 +9,7 @@
 // Initial size of a symbol table
 #define MAX_INITIAL_SYMBOLS 10
 
-void tryAddSymbol(Node* scopeNode, Token* token, SymbolType type);
-Symbol* lookupSymbol(Node* scopeNode,Token* symToken);
+void tryAddSymbol(Node* scopeNode, Token* token, SymbolType type, short argNum);
 void resolveScope(Node* node);
 Symbol* findSymbol(Node* scopeNode, Token* symToken);
 void scoperError(char* msg, int lnum, int chnum);
@@ -36,8 +35,12 @@ void scopeCheckerStart(FILE* file, char* filename, Node* ast) {
   postorderTraverse(ast, &resolveScope);
 }
 
-void tryAddSymbol(Node* node, Token* token, SymbolType type) {
-  Symbol newSym = { token, type }; 
+void tryAddSymbol(Node* node, Token* token, SymbolType type, short argNum) {
+  Symbol newSym = { 
+    .token = token, 
+    .type = type,
+    .argNum = argNum
+  }; 
   Symbol* oldSym = lookupSymbol(node, token);
 
   if(oldSym) {
@@ -123,7 +126,7 @@ void hoistFunctions(Node* ast) {
 
     if(fNode->type == NTFunction) {
       Node* termNode = fNode->children[0]->children[0];
-      tryAddSymbol(fNode, termNode->token, STFunction);
+      tryAddSymbol(fNode, termNode->token, STFunction, -1);
     }
   }
 }
@@ -169,6 +172,8 @@ void resolveScope(Node* node) {
         }
       }
     } else { // identifier in declaration
+      short argNum = -1;
+
       if(parent->type == NTFunction) { // function name
         //stype = STFunction;
         return; // functions already hoisted
@@ -186,6 +191,7 @@ void resolveScope(Node* node) {
 
       } else if(parent->type == NTArg) { // function argument
         stype = STArg;
+        argNum = whichChild(parent);
 
         if(parent->parent->parent->nChildren < 3)
           genericError("Compiler bug: Function AST node missing statement.");
@@ -196,7 +202,7 @@ void resolveScope(Node* node) {
       if(node->nChildren < 1)
         genericError("Compiler bug: Identifier AST node without child.");
 
-      tryAddSymbol(scopeNode, node->children[0]->token, stype);
+      tryAddSymbol(scopeNode, node->children[0]->token, stype, argNum);
     }
   }
 }

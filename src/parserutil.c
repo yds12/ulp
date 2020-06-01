@@ -54,6 +54,7 @@ Node* newNode(NodeType type) {
   node->children = NULL;
   node->parent = NULL;
   node->symTable = NULL;
+  node->cgData = NULL;
 
   if(parserState.nodeCount >= parserState.maxNodes) {
     pNodes = (Node**) realloc(pNodes, sizeof(Node*) * parserState.maxNodes * 2);

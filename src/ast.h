@@ -16,5 +16,7 @@ void checkTree(Node* node, int nodeCount);
 
 void postorderTraverse(Node* node, void (*visit)(Node*));
 
+int whichChild(Node* node);
+
 #endif
 

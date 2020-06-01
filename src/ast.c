@@ -34,6 +34,16 @@ Node* astLastLeaf(Node* ast) {
   return lastChild;
 }
 
+int whichChild(Node* node) {
+  if(!node->parent) return 0;
+
+  for(int i = 0; i < node->parent->nChildren; i++) {
+    if(node->id == node->parent->children[i]->id) return i;
+  }
+
+  genericError("AST node with corrupted ID.");
+}
+
 void postorderTraverse(Node* node, void (*visit)(Node*)) {
   for(int i = 0; i < node->nChildren; i++) {
     if(!node->children[i]) 
