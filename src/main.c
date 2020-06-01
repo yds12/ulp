@@ -38,6 +38,10 @@ int main(int argc, char ** argv) {
 
   lexerStart(sourcefile, filename);
   parserStart(sourcefile, filename, lexerState.nTokens, lexerState.tokens);
+
+  // Just generate the parser output for Graphviz
+  if(cli.outputType == OUT_GRAPHVIZ) return 0;
+
   scopeCheckerStart(sourcefile, filename, parserState.ast);
   codegenStart(sourcefile, filename, parserState.ast);
   fclose(sourcefile);
