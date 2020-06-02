@@ -11,8 +11,6 @@
 // defined identifiers
 #define INITIAL_CODE_SIZE 30
 
-#define INITIAL_BSSSEC_LEN 30
-#define INITIAL_TEXTSEC_LEN 30
 #define MAX_INSTRUCTION_LEN 80
 
 void initializeRegisters();
@@ -24,16 +22,12 @@ void emitCode(Node* node);
 void createCgData(Node* node);
 void allocateReg(Node* node);
 void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2);
-void appendSecBss(char* text);
-void appendSecText(char* text);
 void appendNodeCode(Node* node, char* text);
-void declareGlobalVar(char* varName, char size);
+void declareGlobalVar(Node* node, char* varName, char size);
 char* getSymbolRef(Symbol* sym);
-void initializeSections();
-void finalizeSections();
 void printRegs();
 void printNodeCode(Node* node);
-void printSections();
+void pullChildCode(Node* node, int childNumber);
 
 void codegenStart(FILE* file, char* filename, Node* ast) {
   codegenState = (CodegenState) {
@@ -42,10 +36,7 @@ void codegenStart(FILE* file, char* filename, Node* ast) {
   };
 
   initializeRegisters();
-  initializeSections();
   postorderTraverse(ast, &emitCode);
-  finalizeSections();
-  printSections();
 }
 
 void emitCode(Node* node) {
@@ -62,6 +53,7 @@ void emitCode(Node* node) {
       Token* token = litOrIdNode->children[0]->token;
 
       if(node->children[0]->type == NTLiteral) {
+        // TODO for now this only works for int
         createCgData(node);
         allocateReg(node);
         appendInstruction(node, INS_MOV, 
@@ -85,6 +77,11 @@ void emitCode(Node* node) {
           if(!node->children[0]->cgData || !node->children[2]->cgData) {
             genericError("Code generation bug: AST node without code info.");
           }
+
+          appendNodeCode(node, node->children[0]->cgData->code);
+          appendNodeCode(node, node->children[2]->cgData->code);
+          free(node->children[0]->cgData->code);
+          free(node->children[2]->cgData->code);
 
           InstructionType iType = (opToken->type == TTPlus) ? INS_ADD : INS_SUB;
 
@@ -115,6 +112,7 @@ void emitCode(Node* node) {
       Symbol* varSym = lookupSymbol(node, varToken);
 
       createCgData(node);
+      pullChildCode(node, 2);
       appendInstruction(node, INS_MOV,
         getSymbolRef(varSym),
         getRegName(node->children[2]->cgData->reg));
@@ -122,7 +120,7 @@ void emitCode(Node* node) {
     }
   }
   else if(node->type == NTAssignment) {
-    if(node->nChildren == 3) { // declaration with assignment
+    if(node->nChildren == 3) {
       if(!node->children[2]->cgData)
         genericError("Code generation bug: AST node without code info.");
 
@@ -138,18 +136,23 @@ void emitCode(Node* node) {
       Token* varToken = node->children[0]->children[0]->token;
       Symbol* varSym = lookupSymbol(node, varToken);
       createCgData(node);
+      pullChildCode(node, 2);
 
       if(node->children[1]->token->type == TTAssign) {
         appendInstruction(node, INS_MOV,
           getSymbolRef(varSym),
           getRegName(node->children[2]->cgData->reg));
       }
-      else if(node->children[1]->token->type == TTAdd) {
+      else if(node->children[1]->token->type == TTAdd ||
+              node->children[1]->token->type == TTSub) {
+        InstructionType iType = 
+          (node->children[1]->token->type == TTAdd) ? INS_ADD : INS_SUB;
+
         allocateReg(node);
         appendInstruction(node, INS_MOV,
           getRegName(node->cgData->reg),
           getSymbolRef(varSym));
-        appendInstruction(node, INS_ADD,
+        appendInstruction(node, iType,
           getRegName(node->cgData->reg),
           getRegName(node->children[2]->cgData->reg));
         appendInstruction(node, INS_MOV,
@@ -157,118 +160,126 @@ void emitCode(Node* node) {
           getRegName(node->cgData->reg));
         freeNodeReg(node);
       }
-      else if(node->children[1]->token->type == TTSub) {
-      }
 
       freeNodeReg(node->children[2]);
     }
-  }
-  else if(node->type == NTProgram && node->symTable) {
-    for(int i = 0; i < node->symTable->nSymbols; i++) {
-      if(node->symTable->symbols[i]->type == STGlobal) {
-        declareGlobalVar(node->symTable->symbols[i]->token->name, 4);
-      }
+    else if(node->nChildren == 2) { // x++  or  x--
+      // TODO
     }
   }
+  else if(node->type == NTStatement) {
+    createCgData(node);
 
-  printNodeCode(node);
+    if(node->nChildren == 1) { // pulls code from child
+      pullChildCode(node, 0);
+    }
+  }
+  else if(node->type == NTNoop) {
+    createCgData(node);
+    appendInstruction(node, INS_NOP, NULL, NULL);
+  }
+  else if(node->type == NTProgramPart) {
+    createCgData(node);
+    pullChildCode(node, 0);
+  }
+  else if(node->type == NTProgram) {
+    createCgData(node);
+
+    // .bss section
+    if(node->symTable) {
+      appendNodeCode(node, "section .bss\n");
+
+      for(int i = 0; i < node->symTable->nSymbols; i++) {
+        if(node->symTable->symbols[i]->type == STGlobal) {
+          declareGlobalVar(node, node->symTable->symbols[i]->token->name, 4);
+        }
+      }
+    }
+
+    // .text section header
+    appendNodeCode(node, "section .text\n");
+    appendNodeCode(node, "global _start\n");
+    appendNodeCode(node, "_start:\n");
+
+    // pulls code from children
+    for(int i = 0; i < node->nChildren; i++) {
+      if(node->children[i]->cgData && node->children[i]->cgData->code) {
+        pullChildCode(node, i);
+      }
+    }
+
+    // exit syscall
+    appendNodeCode(node, "mov eax, 60\n");
+    appendNodeCode(node, "mov edi, 0\n");
+    appendNodeCode(node, "syscall\n");
+
+    if(cli.outputType < OUT_SILENT) printNodeCode(node);
+  }
 }
 
-void declareGlobalVar(char* varName, char size) {
-  appendSecBss(varName);
-  appendSecBss(": ");
+void pullChildCode(Node* node, int childNumber) {
+  if(node->children[childNumber]->cgData && 
+     node->children[childNumber]->cgData->code) {
+    appendNodeCode(node, node->children[childNumber]->cgData->code);
+    free(node->children[childNumber]->cgData->code);
+  }
+}
+
+void declareGlobalVar(Node* node, char* varName, char size) {
+  appendNodeCode(node, varName);
+  appendNodeCode(node, ": ");
 
   switch(size) {
-    case 1: appendSecBss("resb"); break;
-    case 2: appendSecBss("resw"); break;
-    case 4: appendSecBss("resd"); break;
-    case 8: appendSecBss("resq"); break;
+    case 1: appendNodeCode(node, "resb"); break;
+    case 2: appendNodeCode(node, "resw"); break;
+    case 4: appendNodeCode(node, "resd"); break;
+    case 8: appendNodeCode(node, "resq"); break;
   }
-  appendSecBss(" 1\n");
+  appendNodeCode(node, " 1\n");
 }
 
 void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2) {
   if(!node->cgData) createCgData(node);
-
-  if(!op1 || !op2)
-    genericError("Code generation bug: empty instruction operand.");
 
   char instructionStr[MAX_INSTRUCTION_LEN];
   char* fmt;
 
   switch(inst) {
     case INS_MOV: 
+      if(!op1 || !op2)
+        genericError("Code generation bug: empty instruction operand.");
       fmt = "mov %s, %s\n";
       sprintf(instructionStr, fmt, op1, op2); 
       break;
     case INS_ADD: 
+      if(!op1 || !op2)
+        genericError("Code generation bug: empty instruction operand.");
       fmt = "add %s, %s\n";
       sprintf(instructionStr, fmt, op1, op2); 
       break;
     case INS_SUB: 
+      if(!op1 || !op2)
+        genericError("Code generation bug: empty instruction operand.");
       fmt = "sub %s, %s\n";
       sprintf(instructionStr, fmt, op1, op2); 
       break;
+    case INS_NOP:
+      strcpy(instructionStr, "nop\n");
   }
 
   appendNodeCode(node, instructionStr);
 }
 
-void appendSecBss(char* text) {
-  if(strlen(codegenState.secBssCode) + strlen(text) + 10
-     > codegenState.maxLenBss) {
-    codegenState.secBssCode = (char*) realloc(codegenState.secBssCode, 
-      sizeof(char) * codegenState.maxLenBss * 2);
-    codegenState.maxLenBss *= 2;
-  }
-
-  strcat(codegenState.secBssCode, text);
-}
-
-void appendSecText(char* text) {
-  if(strlen(codegenState.secTextCode) + strlen(text) + 10
-     > codegenState.maxLenText) {
-    codegenState.secTextCode = (char*) realloc(codegenState.secTextCode,
-      sizeof(char) * codegenState.maxLenText * 2);
-    codegenState.maxLenText *= 2;
-  }
-
-  strcat(codegenState.secTextCode, text);
-}
-
 void appendNodeCode(Node* node, char* text) {
   if(strlen(node->cgData->code) + strlen(text) + 10
      > node->cgData->maxCode) {
-    node->cgData->code = (char*) realloc(node->cgData->code,
-      sizeof(char) * node->cgData->maxCode * 2);
     node->cgData->maxCode *= 2;
+    node->cgData->maxCode += strlen(text);
+    node->cgData->code = (char*) realloc(node->cgData->code,
+      sizeof(char) * node->cgData->maxCode);
   }
 
   strcat(node->cgData->code, text);
-}
-
-void initializeSections() {
-  codegenState.maxLenBss = INITIAL_BSSSEC_LEN;
-  codegenState.maxLenText = INITIAL_TEXTSEC_LEN;
-
-  codegenState.secBssCode = (char*) malloc(
-    sizeof(char) * codegenState.maxLenBss);
-  codegenState.secTextCode = (char*) malloc(
-    sizeof(char) * codegenState.maxLenText);
-
-  codegenState.secBssCode[0] = '\0';
-  codegenState.secTextCode[0] = '\0';
-
-  appendSecBss("section .bss\n");
-  appendSecText("section .text\n");
-  appendSecText("global _start\n");
-  appendSecText("_start:\n");
-}
-
-void finalizeSections() {
-  appendSecText("mov eax, 60\n"); // exit syscall
-  appendSecText("mov edi, 0\n");
-  appendSecText("syscall\n");
 }
 
 void initializeRegisters() {
@@ -327,6 +338,7 @@ void createCgData(Node* node) {
     node->cgData = (CgData*) malloc(sizeof(CgData));
     node->cgData->maxCode = INITIAL_CODE_SIZE;
     node->cgData->code = (char*) malloc(sizeof(char) * node->cgData->maxCode);
+    node->cgData->code[0] = '\0';
   }
 }
 
@@ -356,11 +368,5 @@ void printRegs() {
     else printf("0");
   }
   printf("\n");
-}
-
-void printSections() {
-  if(cli.outputType > OUT_DEFAULT) return; 
-  printf("%s\n", codegenState.secBssCode);
-  printf("%s\n", codegenState.secTextCode);
 }
 
