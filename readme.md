@@ -35,7 +35,7 @@ the language will just be called **ulp**, for "uma linguagem de programação".
 Many examples of simple **ulp** programs can be found at the 
 [`test/cases`](test/cases) directory.
 
-## Building and Using the compiler
+## Building and Using the Compiler
 
 To build the compiler, use `make`:
 
@@ -48,7 +48,7 @@ directory:
     ulpc -- The ulp compiler.
     Version: 0.0.7
 
-This will display `ulpc`'s help. To compile a file (so far some an incomplete
+This will display `ulpc`'s help. To compile a file (so far an incomplete
 assembly code will be printed to `stdout`):
 
     $ ./ulpc /path/to/my/source/file.ul
@@ -67,7 +67,7 @@ directory can be automatically executed via the test script:
 
     <output truncated ... >
 
-    	pass 0221_undeclared_func.ul
+        pass 0221_undeclared_func.ul
 	    pass 0225_declared_wrong.ul
 	    pass 0226_declared_wrong.ul
 
@@ -82,14 +82,17 @@ parse trees by using the auxiliar script in `aux/view`:
 
     $ aux/view docs/current.ulp
 
-This is an example of AST:
+This is an example of an AST that you might see:
 
 ![AST](docs/ast.png)
 
 ## Roadmap
 
-Currently, the compiler is capable of parsing the program
-[`docs/current.ulp`](docs/current.ulp). Our plans for the next versions are:
+Currently, the compiler is capable of parsing most programs not using the
+"match" construct, doing scope resolution for variables and functions and
+generating assembly for some of the AST nodes.
+
+Our plans for the next versions are:
 
 Version **0.0.x**: each merge to master should increase `x`.
 
