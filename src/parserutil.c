@@ -15,7 +15,10 @@
 #include "parser.h"
 #include "ast.h"
 
+// Initial size allocated for the stack (will be whenever necessary)
 #define INITIAL_STACK_SIZE 100
+
+// Initial size allocated for the dynamic list of nodes (doubled when needed)
 #define INITIAL_MAX_NODES 250
 
 void initializeStack() {
@@ -80,7 +83,8 @@ void stackPush(Node* node) {
 
 Node* stackPop(int n) {
   Node* node = NULL;
-  if(n >= 0) node = pStack.nodes[pStack.pointer - (n - 1)];
+  if(pStack.pointer - (n - 1) >= 0) 
+    node = pStack.nodes[pStack.pointer - (n - 1)];
 
   pStack.pointer -= n;
   return node;

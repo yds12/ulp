@@ -5,24 +5,121 @@
 
 #define DEBUG
 
+/*
+ * The shift operation in LR parsers reads a new token and put it onto the
+ * stack as a terminal node.
+ *
+ */
 void shift();
+
+/*
+ * The reduction phase in LR parsers look at the top nodes of the stack and
+ * checks if a production rule matches it. If there is a matching rule,
+ * the nodes on the top of the stack are popped and become children of the
+ * new node (the rule head), which is pushed onto the stack.
+ *
+ * returns: 1 if there was a reduction, 0 otherwise.
+ *
+ */
 int reduce();
+
+/*
+ * Reduces when the top of the stack is a function argument. 
+ *
+ * returns: 1 if there was a reduction, 0 otherwise.
+ *
+ */
 int reduceArg();
+
+/*
+ * Reduces when the top of the stack is a semicolon. 
+ *
+ * returns: 1 if there was a reduction, 0 otherwise.
+ *
+ */
 int reduceSemi();
+
+/*
+ * Reduces when the top of the stack is an expression. 
+ *
+ * returns: 1 if there was a reduction, 0 otherwise.
+ *
+ */
 int reduceExpression();
+
+/*
+ * Reduces when the top of the stack is a statement. 
+ *
+ * returns: 1 if there was a reduction, 0 otherwise.
+ *
+ */
 int reduceStatement();
+
+/*
+ * Reduces when the top of the stack is a right parenthesis: ")". 
+ *
+ * returns: 1 if there was a reduction, 0 otherwise.
+ *
+ */
 int reduceRPar();
+
+/*
+ * Reduces when the top of the stack is a right brace: "}". 
+ *
+ * returns: 1 if there was a reduction, 0 otherwise.
+ *
+ */
 int reduceRBrace();
+
+/*
+ * Reduces when the top of the stack is a function call expression. 
+ *
+ * returns: 1 if there was a reduction, 0 otherwise.
+ *
+ */
 int reduceFunctionCallExpr();
+
+/*
+ * Reduces when the top of the stack is a call statement. 
+ *
+ * returns: 1 if there was a reduction, 0 otherwise.
+ *
+ */
 int reduceFunctionCallSt();
+
+/*
+ * Reduces when the top of the stack is an identifier. 
+ *
+ * returns: 1 if there was a reduction, 0 otherwise.
+ *
+ */
 int reduceIdentifier();
+
+/*
+ * The final reduction. Reduces the stack when all nodes are of type 
+ * "program part" to create a single "program" node.
+ *
+ */
 void reduceRoot();
 
-// Replaces the current stack top with a parent node of specified type
+/*
+ * Replaces the current stack top with a parent node of a specified type. The
+ * current node at the top of the stack will be a child of this new node.
+ *
+ * type: the type of the node that must created. 
+ *
+ */
 void singleParent(NodeType type);
 
-// Checks whether a certain type can come before a statement
+/*
+ * Checks whether a certain node type can come before a statement. 
+ *
+ * node: the node whose type must be checked. 
+ * returns: 1 if it this node can precede a statement, 0 otherwise.
+ *
+ */
 int canPrecedeStatement(Node* node);
+
 
 void parserStart(FILE* file, char* filename, int nTokens, Token** tokens) {
   parserState = (ParserState) { 
