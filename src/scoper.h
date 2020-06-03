@@ -11,13 +11,23 @@
 #include <stdio.h>
 #include "datast.h"
 
+// Represents the state of the scope checker
 typedef struct stScoperState {
   FILE* file;
   char* filename;
 } ScoperState;
 
+// The state of the scope checker
 ScoperState scoperState;
 
+/*
+ * Looks from the specified node upwards in the tree to find a symbol that
+ *
+ * file: a pointer to the source file being checked.
+ * filename: the name of the source file being checked.
+ * ast: the root node of the AST.
+ *
+ */
 void scopeCheckerStart(FILE* file, char* filename, Node* ast);
 
 /*

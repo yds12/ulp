@@ -9,18 +9,109 @@
 // Initial size of a symbol table
 #define MAX_INITIAL_SYMBOLS 10
 
-void tryAddSymbol(Node* scopeNode, Token* token, SymbolType type, short argNum);
+/*
+ * Tries to add a symbol to the symbol table of the nearest scope for the
+ * specified node.
+ *
+ * node: the node where to start the search for the symbol.
+ * token: the token containing the name of the symbol.
+ * type: type of symbol to be added.
+ * argNum: if it is a function argument, the position of the argument (starting
+ *   from 0).
+ *
+ */
+void tryAddSymbol(Node* node, Token* token, SymbolType type, short argNum);
+
+/*
+ * Does all the scope checking for a node. This includes adding declared
+ * symbols, checking for redeclarations and use of undeclared symbols.
+ *
+ * node: the node to be checked.
+ *
+ */
 void resolveScope(Node* node);
+
+/*
+ * Finds and returns a symbol from a scope-bearing node (i.e. looks only in
+ * this node, does not search upwards).
+ *
+ * scopeNode: a scope-bearing node (that has a symbol table) wherein we want
+ *   to find a symbol.
+ * symToken: a token containing the name of the symbol.
+ * returns: the symbol, or NULL if not found.
+ *
+ */
 Symbol* findSymbol(Node* scopeNode, Token* symToken);
+
+/*
+ * Displays a scope error message and terminates the program with exit code 1
+ * (error).
+ *
+ * msg: the message text. 
+ * lnum: line number of the error.
+ * chnum: character/column number in the line where the error is found.
+ *
+ */
 void scoperError(char* msg, int lnum, int chnum);
+
+/*
+ * Finds the nearest scope-bearing node (a node with a symbol table) to a
+ * specified node.
+ *
+ * node: the node where to start the search. 
+ * returns: the closest ancestor node containg a symbol table.
+ *
+ */
 Node* getImmediateScope(Node* node);
+
+/*
+ * Allocates memory for a symbol table for a node, and initializes its values.
+ *
+ * scopeNode: the scope-bearing node that will hold the symbol table. 
+ * returns: a pointer to the symbol table.
+ *
+ */
 SymbolTable* createSymTable(Node* scopeNode);
+
+/*
+ * Adds a symbol to the symbol table of a specified scope-bearing node,
+ * managing memory space for the table as needed.
+ *
+ * scopeNode: the scope-bearing node whose symbol table will hold the 
+ *   new symbol. 
+ * symbol: the symbol to be added. 
+ *
+ */
 void addSymbol(Node* scopeNode, Symbol symbol);
+
+/*
+ * Debug function: prints the symbol table of a node. 
+ *
+ * scopeNode: the node whose symbol table is to be printed. 
+ *
+ */
 void printSymTable(Node* scopeNode);
+
+/*
+ * Traverses the AST and adds all function symbols to the global scope.
+ * This must be done before any other scope checking is done. This allows for
+ * functions to be called regardless of where they are defined.
+ *
+ * ast: the root node of the AST. 
+ *
+ */
 void hoistFunctions(Node* ast);
 
-// Only the program and statement blocks have scope
+/*
+ * Returns whether the specified node is a scope-bearing node (i.e. has a
+ * symbol table).
+ *
+ * node: node to be checked. 
+ * returns: 1 if it is a scope-bearing node, 0 otherwise.
+ *
+ */
 int bearsScope(Node* node);
+
 
 void scopeCheckerStart(FILE* file, char* filename, Node* ast) {
   scoperState = (ScoperState) {
