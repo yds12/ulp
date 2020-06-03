@@ -48,10 +48,13 @@ directory:
     ulpc -- The ulp compiler.
     Version: 0.0.7
 
-This will display `ulpc`'s help. To compile a file (so far an incomplete
-assembly code will be printed to `stdout`):
+This will display `ulpc`'s help.
+
+Currently, some (pretty useless) programs can be compiled. To compile a file:
 
     $ ./ulpc /path/to/my/source/file.ul
+
+An executable `a.out` will be created on the working directory.
 
 ### Testing the Compiler
 
@@ -99,8 +102,8 @@ This command will create an `a.out` executable file in the working directory.
 
 Our plans for the next versions are:
 
-Version **0.0.x**: each merge to master should increase `x`.
+Version **0.1.x**: every merge to master should increase `x`.
 
-Version **0.1.0**: some executable being generated. Doesn't have to be the
-full language, just a small subset of it (for example: just int arithmetic).
+Version **0.2.0**: executables being generated for the whole language, as in
+the current grammar specification.
 
