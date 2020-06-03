@@ -33,20 +33,22 @@ void pullChildCode(Node* node, int childNumber);
 void codegenStart(FILE* file, char* filename, Node* ast) {
   codegenState = (CodegenState) {
     .file = file,
-    .filename = filename
+    .filename = filename,
+    .code = NULL
   };
 
   initializeRegisters();
   postorderTraverse(ast, &emitCode);
+
+  if(ast->cgData && ast->cgData->code) {
+    codegenState.code = ast->cgData->code;
+  }
 }
 
 void emitCode(Node* node) {
   char* fmt = "%s";
   char str[MAX_NODE_NAME];
   strReplaceNodeAndTokenName(str, fmt, node);
-
-  if(cli.outputType <= OUT_DEBUG)
-    printf("generating code for %s, ID: %d\n", str, node->id);
 
   if(node->type == NTExpression) {
     if(node->nChildren == 1) {
@@ -230,7 +232,7 @@ void emitCode(Node* node) {
     appendNodeCode(node, "mov edi, 0\n");
     appendNodeCode(node, "syscall\n");
 
-    if(cli.outputType < OUT_SILENT) printNodeCode(node);
+    printNodeCode(node);
   }
 }
 
@@ -390,13 +392,11 @@ char* getSymbolSizeRef(Symbol* sym) {
 }
 
 void printNodeCode(Node* node) {
-  if(cli.outputType > OUT_DEFAULT) return; 
-  if(cli.outputType <= OUT_DEBUG) printf("> ");
+  if(cli.outputType > OUT_DEBUG) return; 
 
   if(node->cgData) {
-    printf("%s", node->cgData->code);
+    printf("%s\n", node->cgData->code);
   } 
-  else if(cli.outputType <= OUT_DEBUG) printf("\n");
 }
 
 void printRegs() {

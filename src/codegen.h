@@ -13,6 +13,7 @@ typedef struct stCodegenState{
   char* busyRegisters;  // which registers are free
   char nGPR;  // how many general purpose registers (GPR)
   char** nameGPR;  // names of the GPRs
+  char* code;  // code generated for the current file
 } CodegenState;
 
 typedef enum enInstructionType {

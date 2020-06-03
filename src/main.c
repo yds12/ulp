@@ -8,6 +8,7 @@
 #include "parser.h"
 #include "scoper.h"
 #include "codegen.h"
+#include "xgen.h"
 
 /*
  * The main function should receive the source file (but it can be ommited
@@ -44,6 +45,8 @@ int main(int argc, char ** argv) {
 
   scopeCheckerStart(sourcefile, filename, parserState.ast);
   codegenStart(sourcefile, filename, parserState.ast);
+  generateExec(filename, codegenState.code);
   fclose(sourcefile);
   return 0;
 }
+

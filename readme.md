@@ -90,25 +90,12 @@ This is an example of an AST that you might see:
 
 Currently, the compiler is capable of parsing most programs not using the
 "match" construct, doing scope resolution for variables and functions and
-generating the complete assembly for programs using a very small subset of 
+generating an executable for programs using a very small subset of 
 the language:
 
     $ ./ulpc ../test/cases/pos/0005a_decl_expr.ul
-    section .bss
-    x: resd 1
-    section .text
-    global _start
-    _start:
-    mov ebx, 2
-    mov r10d, 3
-    add ebx, r10d
-    mov [rel x], ebx
-    mov eax, 60
-    mov edi, 0
-    syscall
-    
-    $ cat test/cases/pos/0005a_decl_expr.ul
-    int x = 2 + 3;
+
+This command will create an `a.out` executable file in the working directory.
 
 Our plans for the next versions are:
 

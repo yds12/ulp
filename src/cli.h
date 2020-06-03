@@ -10,7 +10,7 @@
 #define CLI_H
 
 // Version of the compiler.
-#define VERSION "0.0.8"
+#define VERSION "0.1.0"
 
 // Compiler output type
 #define OUT_DEBUG 0           // all output
