@@ -19,7 +19,11 @@ typedef enum enInstructionType {
   INS_MOV,
   INS_ADD,
   INS_SUB,
-  INS_NOP
+  INS_NOP,
+  INS_INC,
+  INS_DEC,
+  INS_RET,
+  INS_CALL
 } InstructionType;
 
 CodegenState codegenState;

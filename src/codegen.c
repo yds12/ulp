@@ -25,6 +25,7 @@ void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2);
 void appendNodeCode(Node* node, char* text);
 void declareGlobalVar(Node* node, char* varName, char size);
 char* getSymbolRef(Symbol* sym);
+char* getSymbolSizeRef(Symbol* sym);
 void printRegs();
 void printNodeCode(Node* node);
 void pullChildCode(Node* node, int childNumber);
@@ -164,7 +165,23 @@ void emitCode(Node* node) {
       freeNodeReg(node->children[2]);
     }
     else if(node->nChildren == 2) { // x++  or  x--
-      // TODO
+      if(node->children[1]->type != NTTerminal)
+        genericError("Code generation bug: terminal symbol expected.");
+
+      InstructionType iType = INS_INC;
+      if(node->children[1]->token->type == TTDecr) iType = INS_DEC;
+
+      if(node->children[0]->nChildren < 1)
+        genericError("Code generation bug: AST identifier node without child.");
+
+      if(!node->children[0]->children[0]->token)
+        genericError("Code generation bug: AST node missing token.");
+
+      Token* varToken = node->children[0]->children[0]->token;
+      Symbol* varSym = lookupSymbol(node, varToken);
+
+      createCgData(node);
+      appendInstruction(node, iType, getSymbolSizeRef(varSym), NULL);
     }
   }
   else if(node->type == NTStatement) {
@@ -265,6 +282,17 @@ void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2) {
       break;
     case INS_NOP:
       strcpy(instructionStr, "nop\n");
+      break;
+    case INS_INC:
+      if(!op1) genericError("Code generation bug: empty instruction operand.");
+      fmt = "inc %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_DEC:
+      if(!op1) genericError("Code generation bug: empty instruction operand.");
+      fmt = "dec %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
   }
 
   appendNodeCode(node, instructionStr);
@@ -346,6 +374,16 @@ char* getSymbolRef(Symbol* sym) {
   if(sym->type == STGlobal) {
     char* ref = (char*) malloc(sizeof(char) * (sym->token->nameSize + 10));
     sprintf(ref, "[rel %s]", sym->token->name);
+    return ref;
+  }
+  return NULL;
+}
+
+char* getSymbolSizeRef(Symbol* sym) {
+  // TODO for now the size is fixed. Should be decided according to data type.
+  if(sym->type == STGlobal) {
+    char* ref = (char*) malloc(sizeof(char) * (sym->token->nameSize + 20));
+    sprintf(ref, "dword [rel %s]", sym->token->name);
     return ref;
   }
   return NULL;
