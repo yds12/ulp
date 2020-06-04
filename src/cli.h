@@ -25,11 +25,13 @@ int CLI_OUTPUT_TYPE;
 
 struct stCli {
   short outputType;
+  int sourceIdx;
+  int outputIdx;
 };
 
 struct stCli cli;
 
-int parseCLArgs(int argc, char ** argv);
+void parseCLArgs(int argc, char ** argv);
 
 #endif
 

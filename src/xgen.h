@@ -14,9 +14,10 @@
  *
  * filename: the source file name.
  * assemblyCode: the string containing the assembly code.
+ * outputName: the name of the output file.
  *
  */
-void generateExec(char* filename, char* assemblyCode);
+void generateExec(char* filename, char* assemblyCode, char* outputName);
 
 #endif
 

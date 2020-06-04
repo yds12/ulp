@@ -16,7 +16,9 @@
  *
  */
 int main(int argc, char ** argv) {
-  int filenameIdx = parseCLArgs(argc, argv);
+  parseCLArgs(argc, argv);
+  int filenameIdx = cli.sourceIdx;
+  int outputIdx = cli.outputIdx;
 
   FILE* sourcefile;
   char* filename;
@@ -45,7 +47,11 @@ int main(int argc, char ** argv) {
 
   scopeCheckerStart(sourcefile, filename, parserState.ast);
   codegenStart(sourcefile, filename, parserState.ast);
-  generateExec(filename, codegenState.code);
+
+  char* outputName = NULL;
+  if(outputIdx >= 0) outputName = argv[outputIdx];
+  generateExec(filename, codegenState.code, outputName);
+
   fclose(sourcefile);
   return 0;
 }

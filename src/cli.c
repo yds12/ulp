@@ -3,31 +3,32 @@
 #include <string.h>
 #include "cli.h"
 
-int processCLArg(char* arg);
+void processCLArg(char* arg, int index);
 void setDefaultOptions();
 void displayHelp();
 void displayVersion();
 
-int parseCLArgs(int argc, char ** argv) {
+void parseCLArgs(int argc, char ** argv) {
   setDefaultOptions();
-  int fileIdx = -1;
-  if(argc < 2) return fileIdx; // nothing to do
-
-  for(int i = 1; i < argc; i++) { // process each arg.
-    if(processCLArg(argv[i])) fileIdx = i;
+  if(argc < 2) { // nothing to do
+    cli.sourceIdx = -1;
+    return;
   }
-  return fileIdx;
+  for(int i = 1; i < argc; i++) processCLArg(argv[i], i);
 }
 
 void setDefaultOptions() {
   cli = (struct stCli) {
-    .outputType = OUT_DEFAULT
+    .outputType = OUT_DEFAULT,
+    .sourceIdx = -1,
+    .outputIdx = -1
   };
 }
 
-int processCLArg(char* arg) {
+void processCLArg(char* arg, int index) {
   int len = strlen(arg);
-  if(len <= 0) return 0;
+  if(len <= 0) return;
+  if(index == cli.outputIdx) return;
 
   if(arg[0] == '-') { // command line option
     switch(len) {
@@ -36,6 +37,7 @@ int processCLArg(char* arg) {
         else if(arg[1] == 'h') displayHelp();
         else if(arg[1] == 'V') displayVersion();
         else if(arg[1] == 'v') cli.outputType = OUT_VERBOSE;
+        else if(arg[1] == 'o') cli.outputIdx = index + 1;
         break;
       case 6:
         if(strncmp("--help", arg, len) == 0) 
@@ -60,13 +62,24 @@ int processCLArg(char* arg) {
         break;
     }
 
-    return 0;
+    return;
   }
-  return 1; // this arg is the filename
+  cli.sourceIdx = index; // this arg is the filename
 }
 
 void displayHelp() {
-  printf("ulpc -- The ulp compiler.\nVersion: " VERSION "\n");
+  printf("ulpc -- The ulp compiler.\n"
+    "Version: " VERSION "\n"
+    "Usage: ulpc [options] file\n"
+    "Options:\n"
+    "  --cdebug\t\tDebug mode. Displays lots of compiler debug information.\n"
+    "  --graphviz\t\tOnly parses and outputs the AST in graphviz format.\n"
+    "  --help, -h\t\tDisplays this help message.\n"
+    "  -o <file>\t\tSets <file> as the output file.\n"
+    "  --silent, -s\t\tNo output (to stdout).\n"
+    "  --verbose, -v\t\tDetailed output.\n"
+    "  --version, -V\t\tDisplays the compiler version.\n"
+  );
   exit(0);
 }
 
