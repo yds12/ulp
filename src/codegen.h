@@ -14,6 +14,7 @@ typedef struct stCodegenState{
   char nGPR;  // how many general purpose registers (GPR)
   char** nameGPR;  // names of the GPRs
   char* code;  // code generated for the current file
+  int nLabels;
 } CodegenState;
 
 typedef enum enInstructionType {
@@ -26,7 +27,19 @@ typedef enum enInstructionType {
   INS_RET,
   INS_CALL,
   INS_AND,
-  INS_OR
+  INS_OR,
+  INS_MUL,
+  INS_IMUL,
+  INS_CMP,
+  INS_JMP,
+  INS_JZ,
+  INS_JNZ,
+  INS_JG,
+  INS_JGE,
+  INS_JE,
+  INS_JNE,
+  INS_JL,
+  INS_JLE
 } InstructionType;
 
 CodegenState codegenState;

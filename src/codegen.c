@@ -29,12 +29,14 @@ char* getSymbolSizeRef(Symbol* sym);
 void printRegs();
 void printNodeCode(Node* node);
 void pullChildCode(Node* node, int childNumber);
+char* getLabel();
 
 void codegenStart(FILE* file, char* filename, Node* ast) {
   codegenState = (CodegenState) {
     .file = file,
     .filename = filename,
-    .code = NULL
+    .code = NULL,
+    .nLabels = 0
   };
 
   initializeRegisters();
@@ -56,7 +58,7 @@ void emitCode(Node* node) {
       Token* token = litOrIdNode->children[0]->token;
 
       if(node->children[0]->type == NTLiteral) {
-        // TODO for now this only works for int
+        // TODO for now this only works for int and bool
         createCgData(node);
         allocateReg(node);
 
@@ -79,34 +81,42 @@ void emitCode(Node* node) {
     } else if(node->nChildren == 3) {
       if(node->children[1]->type == NTBinaryOp) { // binary operation
         Token* opToken = node->children[1]->children[0]->token;
-        if(opToken->type == TTPlus || opToken->type == TTMinus ||
-           opToken->type == TTAnd || opToken->type == TTOr) {
-          createCgData(node);
+        createCgData(node);
 
-          if(!node->children[0]->cgData || !node->children[2]->cgData) {
-            genericError("Code generation bug: AST node without code info.");
-          }
-
-          appendNodeCode(node, node->children[0]->cgData->code);
-          appendNodeCode(node, node->children[2]->cgData->code);
-          free(node->children[0]->cgData->code);
-          free(node->children[2]->cgData->code);
-
-          InstructionType iType;
-          
-          switch(opToken->type) {
-            case TTPlus: iType = INS_ADD; break;
-            case TTMinus: iType = INS_SUB; break;
-            case TTAnd: iType = INS_AND; break;
-            case TTOr: iType = INS_OR; break;
-          }
-
-          node->cgData->reg = node->children[0]->cgData->reg;
-          appendInstruction(node, iType,
-            getRegName(node->children[0]->cgData->reg),
-            getRegName(node->children[2]->cgData->reg));
-          freeNodeReg(node->children[2]);
+        if(!node->children[0]->cgData || !node->children[2]->cgData) {
+          genericError("Code generation bug: AST node without code info.");
         }
+
+        appendNodeCode(node, node->children[0]->cgData->code);
+        appendNodeCode(node, node->children[2]->cgData->code);
+        free(node->children[0]->cgData->code);
+        free(node->children[2]->cgData->code);
+
+        InstructionType iType;
+        
+        switch(opToken->type) {
+          case TTPlus: iType = INS_ADD; break;
+          case TTMinus: iType = INS_SUB; break;
+          case TTAnd: iType = INS_AND; break;
+          case TTOr: iType = INS_OR; break;
+          case TTMult: iType = INS_IMUL; break;
+          case TTEq:
+          case TTGreater:
+          case TTGEq:
+          case TTLess:
+          case TTLEq:
+            iType = INS_CMP;
+            break;
+          default:
+            genericError("Code generation error: invalid binary operation.");
+            break;
+        }
+
+        node->cgData->reg = node->children[0]->cgData->reg;
+        appendInstruction(node, iType,
+          getRegName(node->children[0]->cgData->reg),
+          getRegName(node->children[2]->cgData->reg));
+        freeNodeReg(node->children[2]);
       }
     }
   }
@@ -199,6 +209,64 @@ void emitCode(Node* node) {
       appendInstruction(node, iType, getSymbolSizeRef(varSym), NULL);
     }
   }
+  else if(node->type == NTIfSt) {
+    // TODO: so far only works with binary EXPR as conditional
+    if(node->nChildren < 2)
+      genericError("Compiler bug: AST 'if' node missing children.");
+
+    Node* condNode = node->children[0];
+    Node* thenNode = node->children[1];
+    Node* elsedNode = node->children[2];
+
+    createCgData(node);
+    pullChildCode(node, 0); // comparison
+
+    if(condNode->type != NTExpression)
+      genericError("Compiler bug: expression not found for 'if' condition.");
+
+    if(condNode->nChildren == 3) { // binary expression
+      if(condNode->children[1]->nChildren < 1 
+         || condNode->children[1]->children[0]->type != NTTerminal
+         || !condNode->children[1]->children[0]->token)
+        genericError("Compiler bug: operator missing.");
+
+      char hasElse = (node->nChildren == 3);
+      char* elseLabel = getLabel();
+      char* endLabel = getLabel();
+
+      TokenType opType = condNode->children[1]->children[0]->token->type;
+      switch(opType) {
+        case TTEq: appendNodeCode(node, "jne "); break;
+        case TTGreater: appendNodeCode(node, "jle "); break;
+        case TTGEq: appendNodeCode(node, "jl "); break;
+        case TTLess: appendNodeCode(node, "jge "); break;
+        case TTLEq: appendNodeCode(node, "jg "); break;
+      }
+
+      // if condition not satisfied, jump to else (if it exists) or end
+      if(hasElse) appendNodeCode(node, elseLabel);
+      else appendNodeCode(node, endLabel);
+      appendNodeCode(node, "\n");
+
+      pullChildCode(node, 1); // THEN code
+
+      if(hasElse) {
+        appendNodeCode(node, "jmp ");  // end of THEN code: jump to END
+        appendNodeCode(node, endLabel);
+        appendNodeCode(node, "\n");
+
+        appendNodeCode(node, elseLabel);
+        appendNodeCode(node, ":\n");
+        pullChildCode(node, 2); // ELSE code
+      }
+
+      appendNodeCode(node, endLabel); // end label
+      appendNodeCode(node, ":\n");
+
+      free(elseLabel);
+      free(endLabel);
+    }
+  }
   else if(node->type == NTStatement) {
     createCgData(node);
     if(node->nChildren == 1) pullChildCode(node, 0);
@@ -244,6 +312,14 @@ void emitCode(Node* node) {
 
     printNodeCode(node);
   }
+  printNodeCode(node);
+}
+
+char* getLabel() {
+  char* label = (char*) malloc(sizeof(char) * 8);
+  sprintf(label, "l%d", codegenState.nLabels);
+  codegenState.nLabels++;
+  return label;
 }
 
 void pullChildCode(Node* node, int childNumber) {
@@ -276,47 +352,67 @@ void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2) {
   switch(inst) {
     case INS_MOV: 
       if(!op1 || !op2)
-        genericError("Code generation bug: empty instruction operand.");
+        genericError("Code generation bug: empty instruction operand for MOV.");
       fmt = "mov %s, %s\n";
       sprintf(instructionStr, fmt, op1, op2); 
       break;
     case INS_ADD: 
       if(!op1 || !op2)
-        genericError("Code generation bug: empty instruction operand.");
+        genericError("Code generation bug: empty instruction operand for ADD.");
       fmt = "add %s, %s\n";
       sprintf(instructionStr, fmt, op1, op2); 
       break;
     case INS_SUB: 
       if(!op1 || !op2)
-        genericError("Code generation bug: empty instruction operand.");
+        genericError("Code generation bug: empty instruction operand for SUB.");
       fmt = "sub %s, %s\n";
+      sprintf(instructionStr, fmt, op1, op2); 
+      break;
+    case INS_IMUL: 
+      if(!op1 || !op2) genericError(
+          "Code generation bug: empty instruction operand for IMUL.");
+      fmt = "imul %s, %s\n";
       sprintf(instructionStr, fmt, op1, op2); 
       break;
     case INS_AND: 
       if(!op1 || !op2)
-        genericError("Code generation bug: empty instruction operand.");
+        genericError("Code generation bug: empty instruction operand for AND.");
       fmt = "and %s, %s\n";
       sprintf(instructionStr, fmt, op1, op2); 
       break;
     case INS_OR: 
       if(!op1 || !op2)
-        genericError("Code generation bug: empty instruction operand.");
+        genericError("Code generation bug: empty instruction operand for OR.");
       fmt = "or %s, %s\n";
       sprintf(instructionStr, fmt, op1, op2); 
       break;
-    case INS_NOP:
-      strcpy(instructionStr, "nop\n");
+    case INS_CMP: 
+      if(!op1 || !op2)
+        genericError("Code generation bug: empty instruction operand for CMP.");
+      fmt = "cmp %s, %s\n";
+      sprintf(instructionStr, fmt, op1, op2); 
       break;
     case INS_INC:
-      if(!op1) genericError("Code generation bug: empty instruction operand.");
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for INC.");
       fmt = "inc %s\n";
       sprintf(instructionStr, fmt, op1); 
       break;
     case INS_DEC:
-      if(!op1) genericError("Code generation bug: empty instruction operand.");
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for DEC.");
       fmt = "dec %s\n";
       sprintf(instructionStr, fmt, op1); 
       break;
+    case INS_NOP: strcpy(instructionStr, "nop\n"); break;
+    case INS_JZ: strcpy(instructionStr, "jz\n"); break;
+    case INS_JNZ: strcpy(instructionStr, "jnz\n"); break;
+    case INS_JE: strcpy(instructionStr, "je\n"); break;
+    case INS_JNE: strcpy(instructionStr, "jne\n"); break;
+    case INS_JG: strcpy(instructionStr, "jg\n"); break;
+    case INS_JGE: strcpy(instructionStr, "jge\n"); break;
+    case INS_JL: strcpy(instructionStr, "jl\n"); break;
+    case INS_JLE: strcpy(instructionStr, "jle\n"); break;
   }
 
   appendNodeCode(node, instructionStr);
