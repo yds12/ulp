@@ -3,8 +3,10 @@ SUCCESS_COLOR = "\033[32m"
 STRONG_ERROR_COLOR = "\033[1;31m"
 STRONG_SUCCESS_COLOR = "\033[1;32m"
 END_COLOR = "\033[m"
-
 EXTENSION = ".ul"
+TEST_EXEC = "testexec"
+BUILD_DIR = "build"
+
 $total = 0
 $success = 0
 
@@ -16,7 +18,8 @@ def run_tests dir, suite_label, expected_result
 
   files.each do |f|
     $total += 1
-    command = "build/ulpc --silent #{f} ; echo $?"
+    command = "#{BUILD_DIR}/ulpc --silent #{f} -o #{BUILD_DIR}/#{TEST_EXEC}" \
+      " ; echo $?"
 
   #  puts "Running command:"
   #  puts "\t#{command}"

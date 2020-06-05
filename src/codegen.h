@@ -24,7 +24,9 @@ typedef enum enInstructionType {
   INS_INC,
   INS_DEC,
   INS_RET,
-  INS_CALL
+  INS_CALL,
+  INS_AND,
+  INS_OR
 } InstructionType;
 
 CodegenState codegenState;

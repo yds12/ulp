@@ -59,8 +59,13 @@ void emitCode(Node* node) {
         // TODO for now this only works for int
         createCgData(node);
         allocateReg(node);
+
+        char* litValue = token->name;
+        if(token->type == TTTrue) litValue = "1";
+        else if(token->type == TTFalse) litValue = "0";
+
         appendInstruction(node, INS_MOV, 
-          getRegName(node->cgData->reg), token->name);
+          getRegName(node->cgData->reg), litValue);
       } else if(node->children[0]->type == NTIdentifier) {
         createCgData(node);
         Symbol* varSym = lookupSymbol(node, token);
@@ -74,7 +79,8 @@ void emitCode(Node* node) {
     } else if(node->nChildren == 3) {
       if(node->children[1]->type == NTBinaryOp) { // binary operation
         Token* opToken = node->children[1]->children[0]->token;
-        if(opToken->type == TTPlus || opToken->type == TTMinus) {
+        if(opToken->type == TTPlus || opToken->type == TTMinus ||
+           opToken->type == TTAnd || opToken->type == TTOr) {
           createCgData(node);
 
           if(!node->children[0]->cgData || !node->children[2]->cgData) {
@@ -86,7 +92,14 @@ void emitCode(Node* node) {
           free(node->children[0]->cgData->code);
           free(node->children[2]->cgData->code);
 
-          InstructionType iType = (opToken->type == TTPlus) ? INS_ADD : INS_SUB;
+          InstructionType iType;
+          
+          switch(opToken->type) {
+            case TTPlus: iType = INS_ADD; break;
+            case TTMinus: iType = INS_SUB; break;
+            case TTAnd: iType = INS_AND; break;
+            case TTOr: iType = INS_OR; break;
+          }
 
           node->cgData->reg = node->children[0]->cgData->reg;
           appendInstruction(node, iType,
@@ -188,10 +201,7 @@ void emitCode(Node* node) {
   }
   else if(node->type == NTStatement) {
     createCgData(node);
-
-    if(node->nChildren == 1) { // pulls code from child
-      pullChildCode(node, 0);
-    }
+    if(node->nChildren == 1) pullChildCode(node, 0);
   }
   else if(node->type == NTNoop) {
     createCgData(node);
@@ -280,6 +290,18 @@ void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2) {
       if(!op1 || !op2)
         genericError("Code generation bug: empty instruction operand.");
       fmt = "sub %s, %s\n";
+      sprintf(instructionStr, fmt, op1, op2); 
+      break;
+    case INS_AND: 
+      if(!op1 || !op2)
+        genericError("Code generation bug: empty instruction operand.");
+      fmt = "and %s, %s\n";
+      sprintf(instructionStr, fmt, op1, op2); 
+      break;
+    case INS_OR: 
+      if(!op1 || !op2)
+        genericError("Code generation bug: empty instruction operand.");
+      fmt = "or %s, %s\n";
       sprintf(instructionStr, fmt, op1, op2); 
       break;
     case INS_NOP:
