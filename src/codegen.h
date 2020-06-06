@@ -18,6 +18,10 @@ typedef struct stCodegenState{
 } CodegenState;
 
 typedef enum enInstructionType {
+  INS_LABEL,
+  INS_GLOBAL,
+  INS_SYSCALL,
+  INS_SECTION,
   INS_MOV,
   INS_ADD,
   INS_SUB,

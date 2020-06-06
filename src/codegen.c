@@ -87,10 +87,8 @@ void emitCode(Node* node) {
           genericError("Code generation bug: AST node without code info.");
         }
 
-        appendNodeCode(node, node->children[0]->cgData->code);
-        appendNodeCode(node, node->children[2]->cgData->code);
-        free(node->children[0]->cgData->code);
-        free(node->children[2]->cgData->code);
+        pullChildCode(node, 0);
+        pullChildCode(node, 2);
 
         InstructionType iType;
         
@@ -235,33 +233,26 @@ void emitCode(Node* node) {
       char* endLabel = getLabel();
 
       TokenType opType = condNode->children[1]->children[0]->token->type;
-      switch(opType) {
-        case TTEq: appendNodeCode(node, "jne "); break;
-        case TTGreater: appendNodeCode(node, "jle "); break;
-        case TTGEq: appendNodeCode(node, "jl "); break;
-        case TTLess: appendNodeCode(node, "jge "); break;
-        case TTLEq: appendNodeCode(node, "jg "); break;
-      }
+      char* jmpTo = endLabel;
+      if(hasElse) jmpTo = elseLabel;
 
-      // if condition not satisfied, jump to else (if it exists) or end
-      if(hasElse) appendNodeCode(node, elseLabel);
-      else appendNodeCode(node, endLabel);
-      appendNodeCode(node, "\n");
+      switch(opType) {
+        case TTEq: appendInstruction(node, INS_JNE, jmpTo, NULL); break;
+        case TTGreater: appendInstruction(node, INS_JLE, jmpTo, NULL); break;
+        case TTGEq: appendInstruction(node, INS_JL, jmpTo, NULL); break;
+        case TTLess: appendInstruction(node, INS_JGE, jmpTo, NULL); break;
+        case TTLEq: appendInstruction(node, INS_JG, jmpTo, NULL); break;
+      }
 
       pullChildCode(node, 1); // THEN code
 
       if(hasElse) {
-        appendNodeCode(node, "jmp ");  // end of THEN code: jump to END
-        appendNodeCode(node, endLabel);
-        appendNodeCode(node, "\n");
-
-        appendNodeCode(node, elseLabel);
-        appendNodeCode(node, ":\n");
+        appendInstruction(node, INS_JMP, endLabel, NULL);
+        appendInstruction(node, INS_LABEL, elseLabel, NULL);
         pullChildCode(node, 2); // ELSE code
       }
 
-      appendNodeCode(node, endLabel); // end label
-      appendNodeCode(node, ":\n");
+      appendInstruction(node, INS_LABEL, endLabel, NULL);
 
       free(elseLabel);
       free(endLabel);
@@ -284,7 +275,7 @@ void emitCode(Node* node) {
 
     // .bss section
     if(node->symTable) {
-      appendNodeCode(node, "section .bss\n");
+      appendInstruction(node, INS_SECTION, "bss", NULL);
 
       for(int i = 0; i < node->symTable->nSymbols; i++) {
         if(node->symTable->symbols[i]->type == STGlobal) {
@@ -294,9 +285,9 @@ void emitCode(Node* node) {
     }
 
     // .text section header
-    appendNodeCode(node, "section .text\n");
-    appendNodeCode(node, "global _start\n");
-    appendNodeCode(node, "_start:\n");
+    appendInstruction(node, INS_SECTION, "text", NULL);
+    appendInstruction(node, INS_GLOBAL, "_start", NULL);
+    appendInstruction(node, INS_LABEL, "_start", NULL);
 
     // pulls code from children
     for(int i = 0; i < node->nChildren; i++) {
@@ -306,13 +297,13 @@ void emitCode(Node* node) {
     }
 
     // exit syscall
-    appendNodeCode(node, "mov eax, 60\n");
-    appendNodeCode(node, "mov edi, 0\n");
-    appendNodeCode(node, "syscall\n");
+    // TODO: shouldn't refer to EAX and 60 directly
+    appendInstruction(node, INS_MOV, "eax", "60");
+    appendInstruction(node, INS_MOV, "edi", "0");
+    appendInstruction(node, INS_SYSCALL, NULL, NULL);
 
     printNodeCode(node);
   }
-  printNodeCode(node);
 }
 
 char* getLabel() {
@@ -404,15 +395,80 @@ void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2) {
       fmt = "dec %s\n";
       sprintf(instructionStr, fmt, op1); 
       break;
+    case INS_JMP:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for JMP.");
+      fmt = "jmp %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_JZ:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for JZ.");
+      fmt = "jz %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_JNZ:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for JNZ.");
+      fmt = "jnz %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_JE:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for JE.");
+      fmt = "je %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_JNE:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for JNE.");
+      fmt = "jne %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_JG:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for JG.");
+      fmt = "jg %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_JGE:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for JGE.");
+      fmt = "jge %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_JL:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for JL.");
+      fmt = "jl %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_JLE:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for JLE.");
+      fmt = "jle %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_GLOBAL:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for GLOBAL.");
+      fmt = "global %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_LABEL:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for LABEL.");
+      fmt = "%s:\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_SECTION:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for SECTION.");
+      fmt = "section .%s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
     case INS_NOP: strcpy(instructionStr, "nop\n"); break;
-    case INS_JZ: strcpy(instructionStr, "jz\n"); break;
-    case INS_JNZ: strcpy(instructionStr, "jnz\n"); break;
-    case INS_JE: strcpy(instructionStr, "je\n"); break;
-    case INS_JNE: strcpy(instructionStr, "jne\n"); break;
-    case INS_JG: strcpy(instructionStr, "jg\n"); break;
-    case INS_JGE: strcpy(instructionStr, "jge\n"); break;
-    case INS_JL: strcpy(instructionStr, "jl\n"); break;
-    case INS_JLE: strcpy(instructionStr, "jle\n"); break;
+    case INS_SYSCALL: strcpy(instructionStr, "syscall\n"); break;
   }
 
   appendNodeCode(node, instructionStr);
