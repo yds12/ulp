@@ -130,7 +130,7 @@ void tryAddSymbol(Node* node, Token* token, SymbolType type, short argNum) {
   Symbol newSym = { 
     .token = token, 
     .type = type,
-    .argNum = argNum
+    .pos = argNum
   }; 
   Symbol* oldSym = lookupSymbol(node, token);
 
@@ -147,6 +147,7 @@ void tryAddSymbol(Node* node, Token* token, SymbolType type, short argNum) {
 SymbolTable* createSymTable(Node* scopeNode) {
   scopeNode->symTable = (SymbolTable*) malloc(sizeof(SymbolTable));
   scopeNode->symTable->nSymbols = 0;
+  scopeNode->symTable->nLocalVars = 0;
   scopeNode->symTable->maxSize = MAX_INITIAL_SYMBOLS;
   scopeNode->symTable->symbols = (Symbol**) 
     malloc(sizeof(Symbol*) * scopeNode->symTable->maxSize);
@@ -169,6 +170,12 @@ void addSymbol(Node* scopeNode, Symbol symbol) {
   Symbol* newSym = (Symbol*) malloc(sizeof(Symbol));
   *newSym = symbol;
   st->symbols[st->nSymbols] = newSym;
+
+  if(st->symbols[st->nSymbols]->type == STLocal) {
+    st->symbols[st->nSymbols]->pos = st->nLocalVars;
+    st->nLocalVars++;
+  }
+
   st->nSymbols++;
 }
 

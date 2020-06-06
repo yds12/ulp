@@ -33,6 +33,10 @@ char* getSymbolRef(Symbol* sym) {
     char* ref = (char*) malloc(sizeof(char) * (sym->token->nameSize + 10));
     sprintf(ref, "[rel %s]", sym->token->name);
     return ref;
+  } else if(sym->type == STLocal) {
+    char* ref = (char*) malloc(sizeof(char) * (sym->token->nameSize + 10));
+    sprintf(ref, "[rsp + %d]", sym->pos * 4);  // TODO: fixed size 4
+    return ref;
   }
   return NULL;
 }
@@ -42,6 +46,10 @@ char* getSymbolSizeRef(Symbol* sym) {
   if(sym->type == STGlobal) {
     char* ref = (char*) malloc(sizeof(char) * (sym->token->nameSize + 20));
     sprintf(ref, "dword [rel %s]", sym->token->name);
+    return ref;
+  } else if(sym->type == STLocal) {
+    char* ref = (char*) malloc(sizeof(char) * (sym->token->nameSize + 20));
+    sprintf(ref, "dword [rsp + %d]", sym->pos * 4);  // TODO: fixed size 4
     return ref;
   }
   return NULL;

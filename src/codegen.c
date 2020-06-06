@@ -252,7 +252,31 @@ void emitCode(Node* node) {
   }
   else if(node->type == NTStatement) {
     createCgData(node);
-    if(node->nChildren == 1) pullChildCode(node, 0);
+    if(node->nChildren == 1) { 
+      pullChildCode(node, 0);
+    } else {
+      char statementBlock = 1;
+
+      for(int i = 0; i < node->nChildren; i++) {
+        if(node->children[i]->type != NTStatement) statementBlock = 0;
+      }
+
+      if(statementBlock) {
+
+        if(node->symTable) { // allocate space in the stack for the variables
+          // TODO: size 4 fixed here
+          // TODO: remove mention to RSP from here
+          char stackSpace[10];
+          sprintf(stackSpace, "%d", node->symTable->nLocalVars * 4);
+          appendInstruction(node, INS_SUB, "rsp", stackSpace);
+        }
+
+        // pulls code from children statements
+        for(int i = 0; i < node->nChildren; i++) {
+          pullChildCode(node, i);
+        }
+      }
+    }
   }
   else if(node->type == NTNoop) {
     createCgData(node);

@@ -125,13 +125,14 @@ typedef enum enSymbolType {
 typedef struct stSymbol {
   Token* token;  // holds the name of the symbol
   short type;  // type of symbol
-  short argNum;  // if function argument, the position
+  short pos;  // if function argument or local variable, the position
 } Symbol;
 
 typedef struct stSymbolTable {
   Symbol** symbols;
   int nSymbols;
   int maxSize;
+  int nLocalVars;  // number of local variables
 } SymbolTable;
 
 typedef struct stCgData {
