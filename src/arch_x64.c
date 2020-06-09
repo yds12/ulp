@@ -129,6 +129,18 @@ void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2) {
       fmt = "dec %s\n";
       sprintf(instructionStr, fmt, op1); 
       break;
+    case INS_NEG:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for NEG.");
+      fmt = "neg %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_NOT:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for NOT.");
+      fmt = "not %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
     case INS_JMP:
       if(!op1) genericError(
         "Code generation bug: empty instruction operand for JMP.");

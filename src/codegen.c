@@ -108,6 +108,38 @@ void emitCode(Node* node) {
           getRegName(node->children[2]->cgData->reg));
         freeNodeReg(node->children[2]);
       }
+    } else if(node->nChildren == 2) {
+      if(node->children[0]->type == NTBinaryOp) {
+        Token* opToken = node->children[0]->children[0]->token;
+
+        if(!opToken)
+          genericError("Code generation bug: missing minus token.");
+
+        if(opToken->type == TTMinus) { // - EXPR
+          createCgData(node);
+
+          if(!node->children[1]->cgData)
+            genericError("Code generation bug: AST node without code info.");
+
+          pullChildCode(node, 1);
+          node->cgData->reg = node->children[1]->cgData->reg;
+          appendInstruction(node, INS_NEG,
+            getRegName(node->children[1]->cgData->reg), NULL);
+          freeNodeReg(node->children[1]);
+        }
+      } else if(node->children[0]->type == NTTerminal &&
+                node->children[0]->token->type == TTNot) { // not EXPR
+        createCgData(node);
+
+        if(!node->children[1]->cgData)
+          genericError("Code generation bug: AST node without code info.");
+
+        pullChildCode(node, 1);
+        node->cgData->reg = node->children[1]->cgData->reg;
+        appendInstruction(node, INS_NOT,
+          getRegName(node->children[1]->cgData->reg), NULL);
+        freeNodeReg(node->children[1]);
+      }
     }
   }
   else if(node->type == NTDeclaration) {

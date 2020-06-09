@@ -28,6 +28,8 @@ typedef enum enInstructionType {
   INS_NOP,
   INS_INC,
   INS_DEC,
+  INS_NEG,
+  INS_NOT,
   INS_RET,
   INS_CALL,
   INS_AND,
