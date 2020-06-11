@@ -10,7 +10,7 @@
 #include "codegen.h"
 #include "util.h"
 
-#define MAX_INSTRUCTION_LEN 80
+#define MAX_INSTRUCTION_LEN 300
 
 void initializeRegisters() {
   const char gprSize = N_GPR;
@@ -98,6 +98,24 @@ void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2) {
           "Code generation bug: empty instruction operand for IMUL.");
       fmt = "imul %s, %s\n";
       sprintf(instructionStr, fmt, op1, op2); 
+      break;
+    case INS_DIVISION: 
+      if(!op1 || !op2) genericError(
+          "Code generation bug: empty instruction operand for DIVISION.");
+      fmt = "xor edx, edx\nmov eax, %s\nidiv %s\n";
+      sprintf(instructionStr, fmt, op1, op2); 
+      break;
+    case INS_GETQUOTIENT: 
+      if(!op1) genericError(
+          "Code generation bug: empty instruction operand for GET QUOTIENT.");
+      fmt = "mov %s, eax\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_GETREMAINDER: 
+      if(!op1) genericError(
+          "Code generation bug: empty instruction operand for GET REMAINDER.");
+      fmt = "mov %s, edx\n";
+      sprintf(instructionStr, fmt, op1); 
       break;
     case INS_AND: 
       if(!op1 || !op2)

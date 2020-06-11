@@ -82,31 +82,45 @@ void emitCode(Node* node) {
         pullChildCode(node, 0);
         pullChildCode(node, 2);
 
-        InstructionType iType;
-        
-        switch(opToken->type) {
-          case TTPlus: iType = INS_ADD; break;
-          case TTMinus: iType = INS_SUB; break;
-          case TTAnd: iType = INS_AND; break;
-          case TTOr: iType = INS_OR; break;
-          case TTMult: iType = INS_IMUL; break;
-          case TTEq:
-          case TTGreater:
-          case TTGEq:
-          case TTLess:
-          case TTLEq:
-            iType = INS_CMP;
-            break;
-          default:
-            genericError("Code generation error: invalid binary operation.");
-            break;
-        }
+        if(opToken->type == TTDiv || opToken->type == TTMod) { // division/mod
+          appendInstruction(node, INS_DIVISION, 
+            getRegName(node->children[0]->cgData->reg),
+            getRegName(node->children[2]->cgData->reg));
 
-        node->cgData->reg = node->children[0]->cgData->reg;
-        appendInstruction(node, iType,
-          getRegName(node->children[0]->cgData->reg),
-          getRegName(node->children[2]->cgData->reg));
-        freeNodeReg(node->children[2]);
+          node->cgData->reg = node->children[0]->cgData->reg;
+
+          InstructionType iType = (opToken->type == TTDiv) ? 
+            INS_GETQUOTIENT : INS_GETREMAINDER;
+
+          appendInstruction(node, iType, getRegName(node->cgData->reg), NULL);
+          freeNodeReg(node->children[2]);
+        } else { // other binary operations
+          InstructionType iType;
+          
+          switch(opToken->type) {
+            case TTPlus: iType = INS_ADD; break;
+            case TTMinus: iType = INS_SUB; break;
+            case TTAnd: iType = INS_AND; break;
+            case TTOr: iType = INS_OR; break;
+            case TTMult: iType = INS_IMUL; break;
+            case TTEq:
+            case TTGreater:
+            case TTGEq:
+            case TTLess:
+            case TTLEq:
+              iType = INS_CMP;
+              break;
+            default:
+              genericError("Code generation error: invalid binary operation.");
+              break;
+          }
+
+          node->cgData->reg = node->children[0]->cgData->reg;
+          appendInstruction(node, iType,
+            getRegName(node->children[0]->cgData->reg),
+            getRegName(node->children[2]->cgData->reg));
+          freeNodeReg(node->children[2]);
+        }
       }
     } else if(node->nChildren == 2) {
       if(node->children[0]->type == NTBinaryOp) {
@@ -125,7 +139,6 @@ void emitCode(Node* node) {
           node->cgData->reg = node->children[1]->cgData->reg;
           appendInstruction(node, INS_NEG,
             getRegName(node->children[1]->cgData->reg), NULL);
-          freeNodeReg(node->children[1]);
         }
       } else if(node->children[0]->type == NTTerminal &&
                 node->children[0]->token->type == TTNot) { // not EXPR
