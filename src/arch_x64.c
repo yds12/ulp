@@ -102,7 +102,7 @@ void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2) {
     case INS_DIVISION: 
       if(!op1 || !op2) genericError(
           "Code generation bug: empty instruction operand for DIVISION.");
-      fmt = "xor edx, edx\nmov eax, %s\nidiv %s\n";
+      fmt = "mov eax, %s\ncdq\nidiv %s\n";
       sprintf(instructionStr, fmt, op1, op2); 
       break;
     case INS_GETQUOTIENT: 
