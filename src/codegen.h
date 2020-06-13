@@ -26,6 +26,7 @@ typedef enum enInstructionType {
   INS_DIVISION,
   INS_GETQUOTIENT,
   INS_GETREMAINDER,
+  INS_EXIT,
 
   // regular instructions
   INS_MOV,

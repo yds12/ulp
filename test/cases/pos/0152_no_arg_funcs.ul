@@ -1,0 +1,14 @@
+fn my_fun => {
+  int x;
+  x = 3;
+}
+
+fn myFun2 => {
+  int x = 3;
+  int y = 10;
+  x = y + x;
+  y = y * 2;
+}
+
+int w;
+w = 42;

@@ -29,6 +29,7 @@ void initializeRegisters() {
 }
 
 char* getSymbolRef(Symbol* sym) {
+  // TODO: use rbp instead of rsp
   if(sym->type == STGlobal) {
     char* ref = (char*) malloc(sizeof(char) * (sym->token->nameSize + 10));
     sprintf(ref, "[rel %s]", sym->token->name);
@@ -115,6 +116,12 @@ void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2) {
       if(!op1) genericError(
           "Code generation bug: empty instruction operand for GET REMAINDER.");
       fmt = "mov %s, edx\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_EXIT: 
+      if(!op1) genericError(
+          "Code generation bug: empty instruction operand for EXIT.");
+      fmt = "mov eax, 60\nmov edi, %s\nsyscall\n";
       sprintf(instructionStr, fmt, op1); 
       break;
     case INS_AND: 
@@ -233,6 +240,7 @@ void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2) {
       break;
     case INS_NOP: strcpy(instructionStr, "nop\n"); break;
     case INS_SYSCALL: strcpy(instructionStr, "syscall\n"); break;
+    case INS_RET: strcpy(instructionStr, "ret\n"); break;
   }
 
   appendNodeCode(node, instructionStr);

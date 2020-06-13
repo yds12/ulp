@@ -327,6 +327,44 @@ void emitCode(Node* node) {
     createCgData(node);
     appendInstruction(node, INS_NOP, NULL, NULL);
   }
+  else if(node->type == NTFunction) {
+    // TODO: prologue and epilogue, allocate arguments on stack
+    createCgData(node);
+
+    // create label with function name
+    if(node->nChildren != 3)
+      genericError("Code generator bug: bad function AST node (missing "
+        "children).");
+
+    if(node->children[0]->type != NTIdentifier)
+      genericError("Code generator bug: bad function AST node (identifier "
+        "expected).");
+
+    if(node->children[1]->type != NTArgList)
+      genericError("Code generator bug: bad function AST node (parameter "
+        "declaration expected).");
+
+    if(node->children[2]->type != NTStatement)
+      genericError("Code generator bug: bad function AST node (statement "
+        "expected).");
+
+    if(node->children[0]->nChildren != 1)
+      genericError("Code generator bug: bad function AST node (ID node "
+        "without child node).");
+
+    if(!node->children[0]->children[0]->token)
+      genericError("Code generator bug: bad function AST node (terminal node "
+        "without token).");
+
+    char* fName = node->children[0]->children[0]->token->name;
+    appendInstruction(node, INS_LABEL, fName, NULL);
+
+    // pull code from function body
+    pullChildCode(node, 2);
+    
+    // return
+    appendInstruction(node, INS_RET, NULL, NULL);
+  }
   else if(node->type == NTProgramPart) {
     createCgData(node);
     pullChildCode(node, 0);
@@ -348,20 +386,33 @@ void emitCode(Node* node) {
     // .text section header
     appendInstruction(node, INS_SECTION, "text", NULL);
     appendInstruction(node, INS_GLOBAL, "_start", NULL);
+
+    // first pulls code from functions
+    for(int i = 0; i < node->nChildren; i++) {
+      if(node->children[i]->type == NTProgramPart
+         && node->children[i]->nChildren == 1
+         && node->children[i]->children[0]->type == NTFunction
+         && node->children[i]->cgData 
+         && node->children[i]->cgData->code) {
+        pullChildCode(node, i);
+      }
+    }
+
     appendInstruction(node, INS_LABEL, "_start", NULL);
 
-    // pulls code from children
+    // then pulls code from other children
     for(int i = 0; i < node->nChildren; i++) {
-      if(node->children[i]->cgData && node->children[i]->cgData->code) {
+      if(node->children[i]->type == NTProgramPart
+         && node->children[i]->nChildren == 1
+         && node->children[i]->children[0]->type != NTFunction
+         && node->children[i]->cgData 
+         && node->children[i]->cgData->code) {
         pullChildCode(node, i);
       }
     }
 
     // exit syscall
-    // TODO: shouldn't refer to EAX and 60 directly
-    appendInstruction(node, INS_MOV, "eax", "60");
-    appendInstruction(node, INS_MOV, "edi", "0");
-    appendInstruction(node, INS_SYSCALL, NULL, NULL);
+    appendInstruction(node, INS_EXIT, "0", NULL);
 
     printNodeCode(node);
   }
