@@ -1,0 +1,17 @@
+int x = 0;
+
+fn func int y => {
+  if y == 0: {
+    int z = 0;
+
+    if y + z == 0: {
+      int w = 0;
+    } else {
+      int w = 3;
+    }
+  } else {
+    int z = 1;
+  }
+}
+
+int y = 15;

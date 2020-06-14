@@ -27,6 +27,8 @@ typedef enum enInstructionType {
   INS_GETQUOTIENT,
   INS_GETREMAINDER,
   INS_EXIT,
+  INS_EPILOGUE,
+  INS_SETRET,
 
   // regular instructions
   INS_MOV,
@@ -53,7 +55,9 @@ typedef enum enInstructionType {
   INS_JE,
   INS_JNE,
   INS_JL,
-  INS_JLE
+  INS_JLE,
+  INS_PUSH,
+  INS_POP
 } InstructionType;
 
 CodegenState codegenState;
@@ -64,6 +68,7 @@ void appendNodeCode(Node* node, char* text);
 void declareGlobalVar(Node* node, char* varName, char size);
 char* getSymbolRef(Symbol* sym, Node* node);
 char* getSymbolSizeRef(Symbol* sym, Node* node);
+char* getArgRegName(short argPos);
 void initializeRegisters();
 
 #endif

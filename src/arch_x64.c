@@ -29,8 +29,23 @@ void initializeRegisters() {
   }
 }
 
+char* getArgRegName(short argPos) {
+  char* reg = (char*) malloc(sizeof(char) * 4);
+  
+  switch(argPos) {
+    case 0: sprintf(reg, "edi"); break;
+    case 1: sprintf(reg, "esi"); break;
+    case 2: sprintf(reg, "edx"); break;
+    case 3: sprintf(reg, "ecx"); break;
+    case 4: sprintf(reg, "r8d"); break;
+    case 5: sprintf(reg, "r9d"); break;
+    default: genericError("Code generation error: too many parameters");
+  }
+  return reg;
+}
+
 char* getSymbolRef(Symbol* sym, Node* node) {
-  // TODO: use rbp instead of rsp
+  // TODO: free strings returned by this function
   if(sym->type == STGlobal) {
     char* ref = (char*) malloc(sizeof(char) * (sym->token->nameSize + 10));
     sprintf(ref, "[rel %s]", sym->token->name);
@@ -231,6 +246,18 @@ void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2) {
       fmt = "jle %s\n";
       sprintf(instructionStr, fmt, op1); 
       break;
+    case INS_PUSH:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for PUSH.");
+      fmt = "push %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_POP:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for POP.");
+      fmt = "pop %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
     case INS_GLOBAL:
       if(!op1) genericError(
         "Code generation bug: empty instruction operand for GLOBAL.");
@@ -248,6 +275,15 @@ void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2) {
         "Code generation bug: empty instruction operand for SECTION.");
       fmt = "section .%s\n";
       sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_SETRET:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for SET RETURN.");
+      fmt = "mov eax, %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_EPILOGUE: 
+      strcpy(instructionStr, "pop rbp\nmov rsp, rbp\nret\n"); 
       break;
     case INS_NOP: strcpy(instructionStr, "nop\n"); break;
     case INS_SYSCALL: strcpy(instructionStr, "syscall\n"); break;

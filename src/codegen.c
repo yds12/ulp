@@ -300,13 +300,12 @@ void emitCode(Node* node) {
 
     if(node->nChildren > 0) {
       pullChildCode(node, 0);
-      // TODO: remove fixed EAX
-      appendInstruction(node, INS_MOV, "eax", 
-        getRegName(node->children[0]->cgData->reg));
+      appendInstruction(node, INS_SETRET, 
+        getRegName(node->children[0]->cgData->reg), NULL);
       freeNodeReg(node->children[0]);
     }
 
-    appendInstruction(node, INS_RET, NULL, NULL);
+    appendInstruction(node, INS_EPILOGUE, NULL, NULL);
   }
   else if(node->type == NTStatement) {
     createCgData(node);
@@ -319,9 +318,16 @@ void emitCode(Node* node) {
         if(node->children[i]->type != NTStatement) statementBlock = 0;
       }
 
+      char hasEpilogue = 0;
+
       if(statementBlock) {
         if(isMlsNode(node) && node->parent->type != NTFunction 
            && node->symTable) { 
+          hasEpilogue = 1;
+          // Save stack pointer as base pointer
+          appendInstruction(node, INS_PUSH, "rbp", NULL);
+          appendInstruction(node, INS_MOV, "rbp", "rsp");
+
           // allocate space in the stack for the variables
           // TODO: size 4 fixed here
           // TODO: remove mention to RSP from here
@@ -333,6 +339,10 @@ void emitCode(Node* node) {
         // pulls code from children statements
         for(int i = 0; i < node->nChildren; i++) {
           pullChildCode(node, i);
+        }
+
+        if(hasEpilogue) {
+          appendInstruction(node, INS_POP, "rbp", NULL);
         }
       }
     }
@@ -374,6 +384,7 @@ void emitCode(Node* node) {
 
     // TODO: generate prologue
     // Save stack pointer as base pointer
+    appendInstruction(node, INS_PUSH, "rbp", NULL);
     appendInstruction(node, INS_MOV, "rbp", "rsp");
 
     Node* mlsNode = getMlsNode(node->children[2]);
@@ -383,15 +394,21 @@ void emitCode(Node* node) {
       appendInstruction(node, INS_SUB, "rsp", stackSpace);
 
       // TODO: move arguments to stack
+      for(int i = 0; i < mlsNode->symTable->nSymbols; i++) {
+        Symbol* argSym = mlsNode->symTable->symbols[i];
+        if(argSym->type == STArg) {
+          appendInstruction(node, INS_MOV, 
+            getSymbolRef(argSym, node),
+            getArgRegName(argSym->pos));
+        }
+      }
     }
 
     // pull code from function body
     pullChildCode(node, 2);
 
-    // TODO: generate epilogue
     // TODO: prevent double return
-    // return
-    appendInstruction(node, INS_RET, NULL, NULL);
+    appendInstruction(node, INS_EPILOGUE, NULL, NULL);
   }
   else if(node->type == NTProgramPart) {
     createCgData(node);
