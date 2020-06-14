@@ -133,6 +133,9 @@ typedef struct stSymbolTable {
   int nSymbols;
   int maxSize;
   int nLocalVars;  // number of local variables
+  int nArgs;  // number of arguments (for functions)
+  int nStackVarsAcc;  // number of stack variables accumulated (+ ancestors)
+  int nStackVars;  // number of variables to allocate in stack
 } SymbolTable;
 
 typedef struct stCgData {

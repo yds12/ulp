@@ -1,0 +1,4 @@
+fn func int x => return;
+
+// x is function parameter, should not be globally visible
+int y = x;

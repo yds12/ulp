@@ -42,5 +42,29 @@ void scopeCheckerStart(FILE* file, char* filename, Node* ast);
  */
 Symbol* lookupSymbol(Node* node, Token* symToken);
 
+/*
+ * Finds the nearest scope-bearing node (a node with a symbol table) to a
+ * specified node.
+ *
+ * node: the node where to start the search. 
+ * returns: the closest ancestor node containg a symbol table.
+ *
+ */
+Node* getImmediateScope(Node* node);
+
+/*
+ * Finds the major local scope node for this node (if any). A major local
+ * scope node is a scope-bearing node that allocates space on the stack for
+ * local variables, namely function body scopes and local scopes right
+ * below the global scope.
+ *
+ * node: the node where to start the search. 
+ * returns: the major local scope node for this node.
+ *
+ */
+Node* getMlsNode(Node* node);
+
+char isMlsNode(Node* node);
+
 #endif
 

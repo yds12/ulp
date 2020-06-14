@@ -68,7 +68,7 @@ void emitCode(Node* node) {
         allocateReg(node);
         appendInstruction(node, INS_MOV,
           getRegName(node->cgData->reg),
-          getSymbolRef(varSym));
+          getSymbolRef(varSym, node));
       }
     } else if(node->nChildren == 3) {
       if(node->children[1]->type == NTBinaryOp) { // binary operation
@@ -175,7 +175,7 @@ void emitCode(Node* node) {
       createCgData(node);
       pullChildCode(node, 2);
       appendInstruction(node, INS_MOV,
-        getSymbolRef(varSym),
+        getSymbolRef(varSym, node),
         getRegName(node->children[2]->cgData->reg));
       freeNodeReg(node->children[2]);
     }
@@ -201,7 +201,7 @@ void emitCode(Node* node) {
 
       if(node->children[1]->token->type == TTAssign) {
         appendInstruction(node, INS_MOV,
-          getSymbolRef(varSym),
+          getSymbolRef(varSym, node),
           getRegName(node->children[2]->cgData->reg));
       }
       else if(node->children[1]->token->type == TTAdd ||
@@ -212,12 +212,12 @@ void emitCode(Node* node) {
         allocateReg(node);
         appendInstruction(node, INS_MOV,
           getRegName(node->cgData->reg),
-          getSymbolRef(varSym));
+          getSymbolRef(varSym, node));
         appendInstruction(node, iType,
           getRegName(node->cgData->reg),
           getRegName(node->children[2]->cgData->reg));
         appendInstruction(node, INS_MOV,
-          getSymbolRef(varSym),
+          getSymbolRef(varSym, node),
           getRegName(node->cgData->reg));
         freeNodeReg(node);
       }
@@ -241,7 +241,7 @@ void emitCode(Node* node) {
       Symbol* varSym = lookupSymbol(node, varToken);
 
       createCgData(node);
-      appendInstruction(node, iType, getSymbolSizeRef(varSym), NULL);
+      appendInstruction(node, iType, getSymbolSizeRef(varSym, node), NULL);
     }
   }
   else if(node->type == NTIfSt) {
@@ -295,6 +295,19 @@ void emitCode(Node* node) {
       free(endLabel);
     }
   }
+  else if(node->type == NTReturnSt) {
+    createCgData(node);
+
+    if(node->nChildren > 0) {
+      pullChildCode(node, 0);
+      // TODO: remove fixed EAX
+      appendInstruction(node, INS_MOV, "eax", 
+        getRegName(node->children[0]->cgData->reg));
+      freeNodeReg(node->children[0]);
+    }
+
+    appendInstruction(node, INS_RET, NULL, NULL);
+  }
   else if(node->type == NTStatement) {
     createCgData(node);
     if(node->nChildren == 1) { 
@@ -307,8 +320,9 @@ void emitCode(Node* node) {
       }
 
       if(statementBlock) {
-
-        if(node->symTable) { // allocate space in the stack for the variables
+        if(isMlsNode(node) && node->parent->type != NTFunction 
+           && node->symTable) { 
+          // allocate space in the stack for the variables
           // TODO: size 4 fixed here
           // TODO: remove mention to RSP from here
           char stackSpace[10];
@@ -328,7 +342,6 @@ void emitCode(Node* node) {
     appendInstruction(node, INS_NOP, NULL, NULL);
   }
   else if(node->type == NTFunction) {
-    // TODO: prologue and epilogue, allocate arguments on stack
     createCgData(node);
 
     // create label with function name
@@ -359,9 +372,24 @@ void emitCode(Node* node) {
     char* fName = node->children[0]->children[0]->token->name;
     appendInstruction(node, INS_LABEL, fName, NULL);
 
+    // TODO: generate prologue
+    // Save stack pointer as base pointer
+    appendInstruction(node, INS_MOV, "rbp", "rsp");
+
+    Node* mlsNode = getMlsNode(node->children[2]);
+    if(mlsNode && mlsNode->symTable) { // allocate stack space
+      char stackSpace[10];
+      sprintf(stackSpace, "%d", mlsNode->symTable->nStackVars * 4);
+      appendInstruction(node, INS_SUB, "rsp", stackSpace);
+
+      // TODO: move arguments to stack
+    }
+
     // pull code from function body
     pullChildCode(node, 2);
-    
+
+    // TODO: generate epilogue
+    // TODO: prevent double return
     // return
     appendInstruction(node, INS_RET, NULL, NULL);
   }

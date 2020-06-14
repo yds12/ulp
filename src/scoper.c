@@ -16,11 +16,9 @@
  * node: the node where to start the search for the symbol.
  * token: the token containing the name of the symbol.
  * type: type of symbol to be added.
- * argNum: if it is a function argument, the position of the argument (starting
- *   from 0).
  *
  */
-void tryAddSymbol(Node* node, Token* token, SymbolType type, short argNum);
+void tryAddSymbol(Node* node, Token* token, SymbolType type);
 
 /*
  * Does all the scope checking for a node. This includes adding declared
@@ -55,14 +53,15 @@ Symbol* findSymbol(Node* scopeNode, Token* symToken);
 void scoperError(char* msg, int lnum, int chnum);
 
 /*
- * Finds the nearest scope-bearing node (a node with a symbol table) to a
+ * Finds the nearest scope-bearing node (a node with a symbol table) above a
  * specified node.
  *
  * node: the node where to start the search. 
- * returns: the closest ancestor node containg a symbol table.
+ * returns: the closest ancestor node (not counting itself) containg a 
+ *   symbol table.
  *
  */
-Node* getImmediateScope(Node* node);
+Node* getScopeAbove(Node* node);
 
 /*
  * Allocates memory for a symbol table for a node, and initializes its values.
@@ -126,11 +125,10 @@ void scopeCheckerStart(FILE* file, char* filename, Node* ast) {
   postorderTraverse(ast, &resolveScope);
 }
 
-void tryAddSymbol(Node* node, Token* token, SymbolType type, short argNum) {
+void tryAddSymbol(Node* node, Token* token, SymbolType type) {
   Symbol newSym = { 
     .token = token, 
-    .type = type,
-    .pos = argNum
+    .type = type
   }; 
   Symbol* oldSym = lookupSymbol(node, token);
 
@@ -147,10 +145,18 @@ void tryAddSymbol(Node* node, Token* token, SymbolType type, short argNum) {
 SymbolTable* createSymTable(Node* scopeNode) {
   scopeNode->symTable = (SymbolTable*) malloc(sizeof(SymbolTable));
   scopeNode->symTable->nSymbols = 0;
+  scopeNode->symTable->nArgs = 0;
   scopeNode->symTable->nLocalVars = 0;
+  scopeNode->symTable->nStackVars = 0;
   scopeNode->symTable->maxSize = MAX_INITIAL_SYMBOLS;
   scopeNode->symTable->symbols = (Symbol**) 
     malloc(sizeof(Symbol*) * scopeNode->symTable->maxSize);
+
+  Node* scopeAbove = getScopeAbove(scopeNode);
+  if(scopeAbove && scopeAbove->symTable) {
+    scopeNode->symTable->nStackVarsAcc = scopeAbove->symTable->nStackVarsAcc;
+  } 
+  else scopeNode->symTable->nStackVarsAcc = 0;
 
   return scopeNode->symTable;
 }
@@ -174,7 +180,17 @@ void addSymbol(Node* scopeNode, Symbol symbol) {
   if(st->symbols[st->nSymbols]->type == STLocal) {
     st->symbols[st->nSymbols]->pos = st->nLocalVars;
     st->nLocalVars++;
+    st->nStackVarsAcc++;
+  } else if(st->symbols[st->nSymbols]->type == STArg) {
+    st->symbols[st->nSymbols]->pos = st->nArgs;
+    st->nArgs++;
+    st->nStackVars++;
+    st->nStackVarsAcc++;
   }
+
+  Node* mlsNode = getMlsNode(scopeNode);
+  if(mlsNode && st->nStackVarsAcc > mlsNode->symTable->nStackVars)
+    mlsNode->symTable->nStackVars = st->nStackVarsAcc;
 
   st->nSymbols++;
 }
@@ -218,13 +234,32 @@ Node* getImmediateScope(Node* node) {
   return getImmediateScope(node->parent);
 }
 
+Node* getScopeAbove(Node* node) {
+  if(!node->parent) return NULL;
+  if(bearsScope(node->parent)) return node->parent;
+  return getScopeAbove(node->parent);
+}
+
+Node* getMlsNode(Node* node) {
+  if(isMlsNode(node)) return node;
+  if(!node->parent) return NULL;
+  return getMlsNode(node->parent);
+}
+
+char isMlsNode(Node* node) {
+  if(!bearsScope(node)) return 0;
+  Node* scopeAbove = getScopeAbove(node);
+  if(scopeAbove && !getScopeAbove(scopeAbove)) return 1;
+  return 0;
+}
+
 void hoistFunctions(Node* ast) {
   for(int i = 0; i < ast->nChildren; i++) {
     Node* fNode = ast->children[i]->children[0];
 
     if(fNode->type == NTFunction) {
       Node* termNode = fNode->children[0]->children[0];
-      tryAddSymbol(fNode, termNode->token, STFunction, -1);
+      tryAddSymbol(fNode, termNode->token, STFunction);
     }
   }
 }
@@ -270,8 +305,6 @@ void resolveScope(Node* node) {
         }
       }
     } else { // identifier in declaration
-      short argNum = -1;
-
       if(parent->type == NTFunction) { // function name
         //stype = STFunction;
         return; // functions already hoisted
@@ -289,7 +322,6 @@ void resolveScope(Node* node) {
 
       } else if(parent->type == NTArg) { // function argument
         stype = STArg;
-        argNum = whichChild(parent);
 
         if(parent->parent->parent->nChildren < 3)
           genericError("Compiler bug: Function AST node missing statement.");
@@ -300,14 +332,17 @@ void resolveScope(Node* node) {
       if(node->nChildren < 1)
         genericError("Compiler bug: Identifier AST node without child.");
 
-      tryAddSymbol(scopeNode, node->children[0]->token, stype, argNum);
+      tryAddSymbol(scopeNode, node->children[0]->token, stype);
     }
   }
 }
 
 int bearsScope(Node* node) {
   if(node->type == NTProgram) return 1;
-  if(node->type == NTStatement && node->nChildren > 0) {
+  //if(node->type == NTStatement && node->nChildren > 0) {
+  if(node->type == NTStatement) {
+    if(node->parent->type == NTFunction) return 1;
+
     for(int i = 0; i < node->nChildren; i++) {
       if(!node->children[i]) {
         genericError("Internal bug: NULL AST node child.");
@@ -335,7 +370,7 @@ void scoperError(char* msg, int lnum, int chnum) {
 void printSymTable(Node* scopeNode) {
   if(cli.outputType > OUT_DEBUG) return;
   if(!scopeNode->symTable) {
-    printf("NT %d: No symtable.\n", scopeNode->type); 
+//    printf("NT %d: No symtable.\n", scopeNode->type); 
     return;
   }
 //  printf("NT %d: symtable %p.\n", scopeNode->type, scopeNode->symTable);

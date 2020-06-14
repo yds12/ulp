@@ -9,6 +9,7 @@
 #include <string.h>
 #include "codegen.h"
 #include "util.h"
+#include "scoper.h"
 
 #define MAX_INSTRUCTION_LEN 300
 
@@ -28,32 +29,42 @@ void initializeRegisters() {
   }
 }
 
-char* getSymbolRef(Symbol* sym) {
+char* getSymbolRef(Symbol* sym, Node* node) {
   // TODO: use rbp instead of rsp
   if(sym->type == STGlobal) {
     char* ref = (char*) malloc(sizeof(char) * (sym->token->nameSize + 10));
     sprintf(ref, "[rel %s]", sym->token->name);
     return ref;
   } else if(sym->type == STLocal) {
+    Node* scopeNode = getImmediateScope(node);
+    if(!scopeNode) genericError("Code generation bug: missing AST scope node");
+
+    int pos = scopeNode->symTable->nStackVarsAcc - 
+      scopeNode->symTable->nLocalVars + sym->pos;
+
     char* ref = (char*) malloc(sizeof(char) * (sym->token->nameSize + 10));
-    sprintf(ref, "[rsp + %d]", sym->pos * 4);  // TODO: fixed size 4
+    sprintf(ref, "[rbp + %d]", pos * 4);  // TODO: fixed size 4
     return ref;
-  }
+  } else if(sym->type == STArg) {
+    int pos = sym->pos;
+    char* ref = (char*) malloc(sizeof(char) * (sym->token->nameSize + 10));
+    sprintf(ref, "[rbp + %d]", pos * 4);  // TODO: fixed size 4
+    return ref;
+  } 
   return NULL;
 }
 
-char* getSymbolSizeRef(Symbol* sym) {
+char* getSymbolSizeRef(Symbol* sym, Node* node) {
   // TODO for now the size is fixed. Should be decided according to data type.
-  if(sym->type == STGlobal) {
-    char* ref = (char*) malloc(sizeof(char) * (sym->token->nameSize + 20));
-    sprintf(ref, "dword [rel %s]", sym->token->name);
-    return ref;
-  } else if(sym->type == STLocal) {
-    char* ref = (char*) malloc(sizeof(char) * (sym->token->nameSize + 20));
-    sprintf(ref, "dword [rsp + %d]", sym->pos * 4);  // TODO: fixed size 4
-    return ref;
-  }
-  return NULL;
+  char* ref = getSymbolRef(sym, node);
+  if(!ref) return NULL;
+
+  char* sizeRef = (char*) malloc(
+    sizeof(char) * (strlen(ref) + strlen("dword ") + 2));
+
+  sprintf(sizeRef, "dword %s", ref);
+  free(ref);
+  return sizeRef;
 }
 
 void declareGlobalVar(Node* node, char* varName, char size) {

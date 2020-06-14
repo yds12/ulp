@@ -62,8 +62,8 @@ void codegenStart(FILE* file, char* filename, Node* ast);
 void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2);
 void appendNodeCode(Node* node, char* text);
 void declareGlobalVar(Node* node, char* varName, char size);
-char* getSymbolRef(Symbol* sym);
-char* getSymbolSizeRef(Symbol* sym);
+char* getSymbolRef(Symbol* sym, Node* node);
+char* getSymbolSizeRef(Symbol* sym, Node* node);
 void initializeRegisters();
 
 #endif
