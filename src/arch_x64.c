@@ -283,7 +283,7 @@ void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2) {
       sprintf(instructionStr, fmt, op1); 
       break;
     case INS_EPILOGUE: 
-      strcpy(instructionStr, "pop rbp\nmov rsp, rbp\nret\n"); 
+      strcpy(instructionStr, ".epilogue:\npop rbp\nmov rsp, rbp\nret\n"); 
       break;
     case INS_NOP: strcpy(instructionStr, "nop\n"); break;
     case INS_SYSCALL: strcpy(instructionStr, "syscall\n"); break;

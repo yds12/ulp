@@ -305,7 +305,7 @@ void emitCode(Node* node) {
       freeNodeReg(node->children[0]);
     }
 
-    appendInstruction(node, INS_EPILOGUE, NULL, NULL);
+    appendInstruction(node, INS_JMP, ".epilogue", NULL);
   }
   else if(node->type == NTStatement) {
     createCgData(node);
@@ -406,8 +406,6 @@ void emitCode(Node* node) {
 
     // pull code from function body
     pullChildCode(node, 2);
-
-    // TODO: prevent double return
     appendInstruction(node, INS_EPILOGUE, NULL, NULL);
   }
   else if(node->type == NTProgramPart) {
@@ -465,7 +463,7 @@ void emitCode(Node* node) {
 
 char* getLabel() {
   char* label = (char*) malloc(sizeof(char) * 8);
-  sprintf(label, "l%d", codegenState.nLabels);
+  sprintf(label, ".l%d", codegenState.nLabels);
   codegenState.nLabels++;
   return label;
 }

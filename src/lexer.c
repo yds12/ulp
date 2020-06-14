@@ -131,7 +131,7 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
     }
   }
 
-  printTokens();
+  //printTokens();
 }
 
 void eatIDKW()

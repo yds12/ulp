@@ -138,12 +138,12 @@ void parserStart(FILE* file, char* filename, int nTokens, Token** tokens) {
     int continueReducing = 0;
 
     do {
-      printStack();  
+      //printStack();  
       continueReducing = reduce(); 
     } while(continueReducing);
   }
 
-  printStack();  
+  //printStack();  
 
   if(pStack.pointer > 0 || fromStackSafe(0)->type != NTProgram) {
     genericError("Failed to completely parse program.");
