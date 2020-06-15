@@ -382,10 +382,7 @@ void emitCode(Node* node) {
     char* fName = node->children[0]->children[0]->token->name;
     appendInstruction(node, INS_LABEL, fName, NULL);
 
-    // TODO: generate prologue
-    // Save stack pointer as base pointer
-    appendInstruction(node, INS_PUSH, "rbp", NULL);
-    appendInstruction(node, INS_MOV, "rbp", "rsp");
+    appendInstruction(node, INS_PROLOGUE, NULL, NULL);
 
     Node* mlsNode = getMlsNode(node->children[2]);
     if(mlsNode && mlsNode->symTable) { // allocate stack space

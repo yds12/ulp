@@ -27,6 +27,7 @@ typedef enum enInstructionType {
   INS_GETQUOTIENT,
   INS_GETREMAINDER,
   INS_EXIT,
+  INS_PROLOGUE,
   INS_EPILOGUE,
   INS_SETRET,
 
