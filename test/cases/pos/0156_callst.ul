@@ -1,0 +1,6 @@
+fn sum int a, int b => {
+  int c = a + b;
+  return c;
+}
+
+sum 2, 19;

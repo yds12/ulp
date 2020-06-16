@@ -28,8 +28,11 @@ typedef enum enInstructionType {
   INS_GETREMAINDER,
   INS_EXIT,
   INS_PROLOGUE,
+  INS_PROLOGUE_STACK,
   INS_EPILOGUE,
+//  INS_EPILOGUE_STACK,
   INS_SETRET,
+  INS_GETRET,
 
   // regular instructions
   INS_MOV,

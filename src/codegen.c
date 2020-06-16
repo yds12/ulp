@@ -69,6 +69,10 @@ void emitCode(Node* node) {
         appendInstruction(node, INS_MOV,
           getRegName(node->cgData->reg),
           getSymbolRef(varSym, node));
+      } else if(node->children[0]->type == NTCallExpr) {
+        createCgData(node);
+        pullChildCode(node, 0);
+        node->cgData->reg = node->children[0]->cgData->reg;
       }
     } else if(node->nChildren == 3) {
       if(node->children[1]->type == NTBinaryOp) { // binary operation
@@ -153,6 +157,47 @@ void emitCode(Node* node) {
           getRegName(node->children[1]->cgData->reg), NULL);
         freeNodeReg(node->children[1]);
       }
+    }
+  }
+  else if(node->type == NTCallParam) { // argument in function call
+    createCgData(node);
+    node->cgData->reg = node->children[0]->cgData->reg;
+    pullChildCode(node, 0);
+  }
+  else if(node->type == NTCallSt || node->type == NTCallExpr) {
+    createCgData(node);
+
+    if(node->nChildren < 1)
+      genericError("Code generation bug: AST call node without function name.");
+
+    if(!node->children[0]->children[0]->token)
+      genericError("Code generation bug: AST node missing token.");
+
+    // pulls code for each argument expression
+    if(node->nChildren > 1) {
+      for(int i = 0; i < node->nChildren - 1; i++) {
+        pullChildCode(node, i + 1);
+      }
+    }
+
+    // copy arguments to the correct registers
+    if(node->nChildren > 1) {
+      for(int i = 0; i < node->nChildren - 1; i++) {
+        appendInstruction(node, INS_MOV, 
+          getArgRegName(i),
+          getRegName(node->children[i + 1]->cgData->reg));
+        freeNodeReg(node->children[i + 1]);
+      }
+    }
+
+    // call instruction
+    char* funcName = node->children[0]->children[0]->token->name;
+    appendInstruction(node, INS_CALL, funcName, NULL);
+
+    // copy return value to a register
+    if(node->type == NTCallExpr) {
+      allocateReg(node);
+      appendInstruction(node, INS_GETRET, getRegName(node->cgData->reg), NULL);
     }
   }
   else if(node->type == NTDeclaration) {
@@ -381,25 +426,28 @@ void emitCode(Node* node) {
 
     char* fName = node->children[0]->children[0]->token->name;
     appendInstruction(node, INS_LABEL, fName, NULL);
-
-    appendInstruction(node, INS_PROLOGUE, NULL, NULL);
-
+    
+    // allocate stack space for arguments and local variables if needed
+    char stackSpace[10];
     Node* mlsNode = getMlsNode(node->children[2]);
-    if(mlsNode && mlsNode->symTable) { // allocate stack space
-      char stackSpace[10];
-      sprintf(stackSpace, "%d", mlsNode->symTable->nStackVars * 4);
-      appendInstruction(node, INS_SUB, "rsp", stackSpace);
 
-      // TODO: move arguments to stack
+    if(mlsNode && mlsNode->symTable) {
+      sprintf(stackSpace, "%d", mlsNode->symTable->nStackVars * 4);
+      appendInstruction(node, INS_PROLOGUE_STACK, stackSpace, NULL);
+
+      // move arguments to stack
       for(int i = 0; i < mlsNode->symTable->nSymbols; i++) {
         Symbol* argSym = mlsNode->symTable->symbols[i];
         if(argSym->type == STArg) {
+          char* regName = getArgRegName(argSym->pos);
           appendInstruction(node, INS_MOV, 
             getSymbolRef(argSym, node),
-            getArgRegName(argSym->pos));
+            regName);
+          free(regName);
         }
       }
     }
+    else appendInstruction(node, INS_PROLOGUE, NULL, NULL);
 
     // pull code from function body
     pullChildCode(node, 2);

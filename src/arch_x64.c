@@ -58,12 +58,12 @@ char* getSymbolRef(Symbol* sym, Node* node) {
       scopeNode->symTable->nLocalVars + sym->pos;
 
     char* ref = (char*) malloc(sizeof(char) * (sym->token->nameSize + 10));
-    sprintf(ref, "[rbp + %d]", pos * 4);  // TODO: fixed size 4
+    sprintf(ref, "[rbp - %d]", pos * 4);  // TODO: fixed size 4
     return ref;
   } else if(sym->type == STArg) {
     int pos = sym->pos;
     char* ref = (char*) malloc(sizeof(char) * (sym->token->nameSize + 10));
-    sprintf(ref, "[rbp + %d]", pos * 4);  // TODO: fixed size 4
+    sprintf(ref, "[rbp - %d]", pos * 4);  // TODO: fixed size 4
     return ref;
   } 
   return NULL;
@@ -258,6 +258,12 @@ void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2) {
       fmt = "pop %s\n";
       sprintf(instructionStr, fmt, op1); 
       break;
+    case INS_CALL:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for CALL.");
+      fmt = "call %s\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
     case INS_GLOBAL:
       if(!op1) genericError(
         "Code generation bug: empty instruction operand for GLOBAL.");
@@ -282,15 +288,27 @@ void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2) {
       fmt = "mov eax, %s\n";
       sprintf(instructionStr, fmt, op1); 
       break;
+    case INS_GETRET:
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for GET RETURN.");
+      fmt = "mov %s, eax\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
+    case INS_PROLOGUE_STACK: // prologue with stack space allocation
+      if(!op1) genericError(
+        "Code generation bug: empty instruction operand for PROLOGUE.");
+      fmt = "push rbp\nmov rbp, rsp\nsub rsp, %s\n"
+        "push rbx\npush r12\npush r13\npush r14\npush r15\n";
+      sprintf(instructionStr, fmt, op1); 
+      break;
     case INS_PROLOGUE: 
-      strcpy(instructionStr, 
-        "push rbx\npush r12\npush r13\npush r14\npush r15\npush rbp\n"
-        "mov rbp, rsp\n"); 
+      strcpy(instructionStr, "push rbp\nmov rbp, rsp\n"
+        "push rbx\npush r12\npush r13\npush r14\npush r15\n");
       break;
     case INS_EPILOGUE: 
       strcpy(instructionStr, ".epilogue:\n"
-        "pop rbp\npop r15\npop r14\npop r13\npop r12\npop rbx\n"
-        "mov rsp, rbp\nret\n"); 
+        "pop r15\npop r14\npop r13\npop r12\npop rbx\n"
+        "mov rsp, rbp\npop rbp\nret\n"); 
       break;
     case INS_NOP: strcpy(instructionStr, "nop\n"); break;
     case INS_SYSCALL: strcpy(instructionStr, "syscall\n"); break;
