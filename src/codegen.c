@@ -30,6 +30,7 @@ void printRegs();
 void printNodeCode(Node* node);
 void pullChildCode(Node* node, int childNumber);
 char* getLabel();
+Node* getBreakable(Node* node);
 
 void codegenStart(FILE* file, char* filename, Node* ast) {
   codegenState = (CodegenState) {
@@ -84,6 +85,48 @@ void emitCode(Node* node) {
   }
   else if(node->type == NTStatement) {
     emitStatementCode(node);
+  }
+  else if(node->type == NTLoopSt) {
+    createCgData(node);
+
+    if(!node->cgData->nextLabel) {
+      node->cgData->nextLabel = getLabel();
+    }
+
+    appendInstruction(node, INS_LABEL, node->cgData->nextLabel, NULL);
+    pullChildCode(node, 0);
+    appendInstruction(node, INS_JMP, node->cgData->nextLabel, NULL);
+
+    if(node->cgData->breakLabel) {
+      appendInstruction(node, INS_LABEL, node->cgData->breakLabel, NULL);
+    }
+  }
+  else if(node->type == NTBreakSt) {
+    createCgData(node);
+
+    Node* scopeNode = getBreakable(node);
+
+    // TODO: must check scope for break and next.
+    if(!scopeNode) genericError("Code generation bug: breakable node missing.");
+    if(!scopeNode->cgData) createCgData(scopeNode);
+    if(!scopeNode->cgData->breakLabel) { // must create the break label
+      scopeNode->cgData->breakLabel = getLabel();
+    }
+
+    appendInstruction(node, INS_JMP, scopeNode->cgData->breakLabel, NULL);
+  }
+  else if(node->type == NTNextSt) {
+    createCgData(node);
+
+    Node* scopeNode = getBreakable(node);
+
+    if(!scopeNode) genericError("Code generation bug: breakable node missing.");
+    if(!scopeNode->cgData) createCgData(scopeNode);
+    if(!scopeNode->cgData->nextLabel) { // must create the break label
+      scopeNode->cgData->nextLabel = getLabel();
+    }
+
+    appendInstruction(node, INS_JMP, scopeNode->cgData->nextLabel, NULL);
   }
   else if(node->type == NTNoop) {
     createCgData(node);
@@ -600,7 +643,16 @@ void createCgData(Node* node) {
     node->cgData->maxCode = INITIAL_CODE_SIZE;
     node->cgData->code = (char*) malloc(sizeof(char) * node->cgData->maxCode);
     node->cgData->code[0] = '\0';
+    node->cgData->breakLabel = NULL;
+    node->cgData->nextLabel = NULL;
   }
+}
+
+Node* getBreakable(Node* node) {
+  if(node->type == NTLoopSt || node->type == NTWhileSt 
+     || node->type == NTForSt) return node;
+  if(!node->parent) return NULL;
+  return getBreakable(node->parent);
 }
 
 void printNodeCode(Node* node) {

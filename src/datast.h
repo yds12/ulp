@@ -142,6 +142,8 @@ typedef struct stCgData {
   char reg;
   char* code;
   int maxCode;
+  char* breakLabel;  // label to jump to if break is encountered
+  char* nextLabel;  // label to jump to if next is encountered
 } CgData;
 
 // Represents a node of the Abstract Syntax Tree (AST)
