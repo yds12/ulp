@@ -16,6 +16,7 @@ char* getRegName(char regNum);
 void freeReg(char regNum);
 void freeNodeReg(Node* node);
 void emitCode(Node* node);
+void emitWhile(Node* node);
 void emitExprCode(Node* node);
 void emitAssignCode(Node* node);
 void emitIfCode(Node* node);
@@ -101,6 +102,9 @@ void emitCode(Node* node) {
       appendInstruction(node, INS_LABEL, node->cgData->breakLabel, NULL);
     }
   }
+  else if(node->type == NTWhileSt) {
+    emitWhile(node);
+  }
   else if(node->type == NTBreakSt) {
     createCgData(node);
 
@@ -142,6 +146,44 @@ void emitCode(Node* node) {
   else if(node->type == NTProgram) {
     emitProgramCode(node);
   }
+}
+
+void emitWhile(Node* node) {
+  createCgData(node);
+
+  if(node->nChildren != 2)
+    genericError("Code generator bug: 'while' node missing children.");
+
+  // TODO: for now only accepts binary operator conditions
+  if(node->children[0]->nChildren != 3)
+    genericError("Code generator bug: bad 'while' condition.");
+  if(node->children[0]->children[1]->type != NTBinaryOp)
+    genericError("Code generator bug: bad 'while' condition.");
+  if(node->children[0]->children[1]->nChildren < 1)
+    genericError("Code generator bug: operator missing terminal node.");
+  if(!node->children[0]->children[1]->children[0]->token)
+    genericError("Code generator bug: terminal node missing token.");
+
+  if(!node->cgData->nextLabel) node->cgData->nextLabel = getLabel();
+  if(!node->cgData->breakLabel) node->cgData->breakLabel = getLabel();
+
+  appendInstruction(node, INS_LABEL, node->cgData->nextLabel, NULL);
+  pullChildCode(node, 0); // condition
+
+  TokenType opType = node->children[0]->children[1]->children[0]->token->type;
+  InstructionType iType = INS_NOP;
+
+  switch(opType) {
+    case TTEq: iType = INS_JNE; break;
+    case TTGreater: iType = INS_JLE; break;
+    case TTGEq: iType = INS_JL; break;
+    case TTLess: iType = INS_JGE; break;
+    case TTLEq: iType = INS_JG; break;
+  }
+  appendInstruction(node, iType, node->cgData->breakLabel, NULL); 
+  pullChildCode(node, 1); // body
+  appendInstruction(node, INS_JMP, node->cgData->nextLabel, NULL);
+  appendInstruction(node, INS_LABEL, node->cgData->breakLabel, NULL);
 }
 
 void emitCallCode(Node* node) {
@@ -380,15 +422,16 @@ void emitIfCode(Node* node) {
     TokenType opType = condNode->children[1]->children[0]->token->type;
     char* jmpTo = endLabel;
     if(hasElse) jmpTo = elseLabel;
+    InstructionType iType = INS_NOP;
 
     switch(opType) {
-      case TTEq: appendInstruction(node, INS_JNE, jmpTo, NULL); break;
-      case TTGreater: appendInstruction(node, INS_JLE, jmpTo, NULL); break;
-      case TTGEq: appendInstruction(node, INS_JL, jmpTo, NULL); break;
-      case TTLess: appendInstruction(node, INS_JGE, jmpTo, NULL); break;
-      case TTLEq: appendInstruction(node, INS_JG, jmpTo, NULL); break;
+      case TTEq: iType = INS_JNE; break;
+      case TTGreater: iType = INS_JLE; break;
+      case TTGEq: iType = INS_JL; break;
+      case TTLess: iType = INS_JGE; break;
+      case TTLEq: iType = INS_JG; break;
     }
-
+    appendInstruction(node, iType, jmpTo, NULL);
     pullChildCode(node, 1); // THEN code
 
     if(hasElse) {
