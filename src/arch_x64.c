@@ -53,6 +53,9 @@ char* getSymbolRef(Symbol* sym, Node* node) {
   } else if(sym->type == STLocal) {
     Node* scopeNode = getImmediateScope(node);
     if(!scopeNode) genericError("Code generation bug: missing AST scope node");
+    if(!scopeNode->symTable) {
+      genericError("Code generation bug: AST scope node without symbol table");
+    }
 
     int pos = scopeNode->symTable->nStackVarsAcc - 
       scopeNode->symTable->nLocalVars + sym->pos;

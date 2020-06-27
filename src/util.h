@@ -97,5 +97,7 @@ void strReplaceNodeAndTokenName(char* str, char* format, Node* node);
 
 void strReplaceNodeAbbrev(char* str, char* format, Node* node);
 
+void printNode(Node* node);
+
 #endif
 

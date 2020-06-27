@@ -16,7 +16,8 @@ char* getRegName(char regNum);
 void freeReg(char regNum);
 void freeNodeReg(Node* node);
 void emitCode(Node* node);
-void emitWhile(Node* node);
+void emitForCode(Node* node);
+void emitWhileCode(Node* node);
 void emitExprCode(Node* node);
 void emitAssignCode(Node* node);
 void emitIfCode(Node* node);
@@ -103,7 +104,10 @@ void emitCode(Node* node) {
     }
   }
   else if(node->type == NTWhileSt) {
-    emitWhile(node);
+    emitWhileCode(node);
+  }
+  else if(node->type == NTForSt) {
+    emitForCode(node);
   }
   else if(node->type == NTBreakSt) {
     createCgData(node);
@@ -148,7 +152,56 @@ void emitCode(Node* node) {
   }
 }
 
-void emitWhile(Node* node) {
+void emitForCode(Node* node) {
+  // TODO: allocation in the stack for the variable in the 'for'
+  // declaration is not being accounted for.
+  createCgData(node);
+
+  if(node->nChildren != 4)
+    genericError("Code generator bug: 'for' node missing children.");
+
+  if(node->children[0]->type != NTDeclaration)
+    genericError("Code generator bug: declaration missing.");
+
+  // TODO: for now only accepts binary operator conditions
+  if(node->children[1]->nChildren != 3)
+    genericError("Code generator bug: bad 'for' condition.");
+  if(node->children[1]->children[1]->type != NTBinaryOp)
+    genericError("Code generator bug: bad 'for' condition.");
+  if(node->children[1]->children[1]->nChildren < 1)
+    genericError("Code generator bug: operator missing terminal node.");
+  if(!node->children[1]->children[1]->children[0]->token)
+    genericError("Code generator bug: terminal node missing token.");
+
+  pullChildCode(node, 0); // declaration
+
+  if(!node->cgData->nextLabel) node->cgData->nextLabel = getLabel();
+  if(!node->cgData->breakLabel) node->cgData->breakLabel = getLabel();
+
+  char* condLabel = getLabel();
+  appendInstruction(node, INS_JMP, condLabel, NULL);
+  appendInstruction(node, INS_LABEL, node->cgData->nextLabel, NULL);
+  pullChildCode(node, 2); // iteration statement
+  appendInstruction(node, INS_LABEL, condLabel, NULL);
+
+  // TODO: refactor this snippet, it appears in many places
+  TokenType opType = node->children[1]->children[1]->children[0]->token->type;
+  InstructionType iType = INS_NOP;
+
+  switch(opType) {
+    case TTEq: iType = INS_JNE; break;
+    case TTGreater: iType = INS_JLE; break;
+    case TTGEq: iType = INS_JL; break;
+    case TTLess: iType = INS_JGE; break;
+    case TTLEq: iType = INS_JG; break;
+  }
+  appendInstruction(node, iType, node->cgData->breakLabel, NULL); 
+  pullChildCode(node, 3); // body
+  appendInstruction(node, INS_JMP, node->cgData->nextLabel, NULL);
+  appendInstruction(node, INS_LABEL, node->cgData->breakLabel, NULL);
+}
+
+void emitWhileCode(Node* node) {
   createCgData(node);
 
   if(node->nChildren != 2)
@@ -239,6 +292,7 @@ void emitDeclarationCode(Node* node) {
 
     Token* varToken = node->children[1]->children[0]->token;
     Symbol* varSym = lookupSymbol(node, varToken);
+    if(!varSym) genericError("Code generation bug: symbol not found.");
 
     createCgData(node);
     pullChildCode(node, 2);
@@ -463,6 +517,8 @@ void emitAssignCode(Node* node) {
 
     Token* varToken = node->children[0]->children[0]->token;
     Symbol* varSym = lookupSymbol(node, varToken);
+    if(!varSym) genericError("Code generation bug: symbol not found.");
+
     createCgData(node);
     pullChildCode(node, 2);
 
@@ -506,6 +562,7 @@ void emitAssignCode(Node* node) {
 
     Token* varToken = node->children[0]->children[0]->token;
     Symbol* varSym = lookupSymbol(node, varToken);
+    if(!varSym) genericError("Code generation bug: symbol not found.");
 
     createCgData(node);
     appendInstruction(node, iType, getSymbolSizeRef(varSym, node), NULL);
@@ -531,6 +588,7 @@ void emitExprCode(Node* node) {
     } else if(node->children[0]->type == NTIdentifier) {
       createCgData(node);
       Symbol* varSym = lookupSymbol(node, token);
+      if(!varSym) genericError("Code generation bug: symbol not found.");
 
       // load the variable in a register
       allocateReg(node);

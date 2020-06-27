@@ -337,3 +337,44 @@ void strReplaceNodeAbbrev(char* str, char* format, Node* node) {
   }
 }
 
+void printNode(Node* node) {
+  printf("Node {\n");
+  
+  char nodeName[MAX_NODE_NAME];
+  strReplaceNodeAbbrev(nodeName, "%s", node);
+  printf("  Type: [%d] %s\n", node->type, nodeName);
+  printf("  ID: %d\n", node->id);
+  printf("  #Children: %d\n", node->nChildren);
+  
+  if(node->parent) {
+    char parentNodeName[MAX_NODE_NAME];
+    strReplaceNodeAbbrev(parentNodeName, "%s", node->parent);
+    printf("  Parent: [%d] %s\n", node->parent->type, parentNodeName);
+
+    for(int i = 0; i < node->parent->nChildren; i++) {
+      if(node->parent->children[i]->id == node->id)
+        printf("  is child #%d\n", i);
+    }
+  }
+  else printf("  Parent: NULL\n"); 
+
+  if(node->symTable) {
+    printf("  Has symtable: true\n");
+  }
+  else printf("  Has symtable: false\n");
+
+  if(node->cgData) {
+    printf("  Has CG Data: true\n");
+  }
+  else printf("  Has CG Data: false\n");
+
+  if(node->token) {
+    char tokenName[MAX_NODE_NAME];
+    strReplaceTokenName(tokenName, "%s", node->token->type);
+    printf("  Token: [%d] %s\n", node->token->type, tokenName);
+  }
+  else printf("  Token: NULL\n");
+
+  printf("}\n");
+}
+

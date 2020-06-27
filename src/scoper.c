@@ -207,7 +207,17 @@ Symbol* lookupSymbol(Node* node, Token* symToken) {
       if(sym) return sym;
     }
     if(!lookNode->parent) return NULL;
-    lookNode = lookNode->parent;
+
+    if(lookNode->parent->type == NTForSt && whichChild(lookNode) < 3) {
+      // for the 'for' statement we have to look for symbols starting from
+      // the scope of the 'for' body
+
+      if(lookNode->parent->nChildren < 4 
+         || lookNode->parent->children[3]->type != NTStatement)
+        genericError("Compiler bug: bad 'for' statement");
+      lookNode = lookNode->parent->children[3];
+    }
+    else lookNode = lookNode->parent;
   }
 }
 
@@ -230,6 +240,14 @@ Node* getImmediateScope(Node* node) {
   if(bearsScope(node)) return node;
   if(!node->parent) {
     genericError("Compiler bug: AST node without scope.");
+  }
+  if(node->parent->type == NTForSt && whichChild(node) < 3) { 
+    // special case: 'for' iteration declaration, expression and statement
+    if(node->parent->nChildren < 4 
+       || node->parent->children[3]->type != NTStatement) 
+      genericError("Compiler bug: bad 'for' statement");
+
+    return getImmediateScope(node->parent->children[3]);
   }
   return getImmediateScope(node->parent);
 }
@@ -318,6 +336,13 @@ void resolveScope(Node* node) {
           stype = STGlobal;
         } else if(ppNode->type == NTStatement) { // local variable
           stype = STLocal;
+        } else if(ppNode->type == NTForSt) { // local 'for' variable
+          stype = STLocal;
+
+          if(ppNode->nChildren < 4 || ppNode->children[3]->type != NTStatement)
+            genericError("Compiler bug: bad 'for' statement.");
+
+          scopeNode = ppNode->children[3];
         }
 
       } else if(parent->type == NTArg) { // function argument
@@ -339,9 +364,9 @@ void resolveScope(Node* node) {
 
 int bearsScope(Node* node) {
   if(node->type == NTProgram) return 1;
-  //if(node->type == NTStatement && node->nChildren > 0) {
   if(node->type == NTStatement) {
-    if(node->parent->type == NTFunction) return 1;
+    if(node->parent->type == NTFunction ||
+       (node->parent->type == NTForSt && whichChild(node) == 3)) return 1;
 
     for(int i = 0; i < node->nChildren; i++) {
       if(!node->children[i]) {
