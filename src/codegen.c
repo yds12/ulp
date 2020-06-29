@@ -173,6 +173,27 @@ void emitForCode(Node* node) {
   if(!node->children[1]->children[1]->children[0]->token)
     genericError("Code generator bug: terminal node missing token.");
 
+  Node* bodyNode = node->children[3];
+
+  // For statements in the global scope must allocate space on the stack
+  // for their loop variable
+  char hasEpilogue = 0;
+
+  if(isMlsNode(bodyNode) && node->parent->type != NTFunction 
+     && bodyNode->symTable) { 
+    hasEpilogue = 1;
+    // Save stack pointer as base pointer
+    appendInstruction(node, INS_PUSH, "rbp", NULL);
+    appendInstruction(node, INS_MOV, "rbp", "rsp");
+
+    // allocate space in the stack for the variables
+    // TODO: size 4 fixed here
+    // TODO: remove mention to RSP from here
+    char stackSpace[10];
+    sprintf(stackSpace, "%d", bodyNode->symTable->nLocalVars * 4);
+    appendInstruction(node, INS_SUB, "rsp", stackSpace);
+  }
+
   pullChildCode(node, 0); // declaration
 
   if(!node->cgData->nextLabel) node->cgData->nextLabel = getLabel();
@@ -195,10 +216,15 @@ void emitForCode(Node* node) {
     case TTLess: iType = INS_JGE; break;
     case TTLEq: iType = INS_JG; break;
   }
+  pullChildCode(node, 1); // for condition
   appendInstruction(node, iType, node->cgData->breakLabel, NULL); 
   pullChildCode(node, 3); // body
   appendInstruction(node, INS_JMP, node->cgData->nextLabel, NULL);
   appendInstruction(node, INS_LABEL, node->cgData->breakLabel, NULL);
+
+  if(hasEpilogue) {
+    appendInstruction(node, INS_POP, "rbp", NULL);
+  }
 }
 
 void emitWhileCode(Node* node) {
@@ -305,7 +331,14 @@ void emitDeclarationCode(Node* node) {
 
 void emitStatementCode(Node* node) {
   createCgData(node);
-  if(node->nChildren == 1) { 
+
+  if(node->parent && node->parent->type == NTForSt && whichChild(node) == 3) {
+    // pulls code from children statements
+    for(int i = 0; i < node->nChildren; i++) {
+      pullChildCode(node, i);
+    }
+  }
+  else if(node->nChildren == 1) { 
     pullChildCode(node, 0);
   } else {
     char statementBlock = 1;

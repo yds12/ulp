@@ -1,0 +1,9 @@
+fn some_fun int a, int b => {
+  for int i = 0, i < 10, i++: {
+    a += i;
+  }
+
+  return b + a;
+}
+
+some_fun 1, 3;
