@@ -31,7 +31,7 @@ int main(int argc, char ** argv) {
 
     if(!sourcefile) {
       if(cli.outputType <= OUT_DEFAULT)
-        printf("ERROR: Invalid file name.\n");
+        fprintf(stderr, "ERROR: Invalid file name.\n");
 
       return 1;
     }

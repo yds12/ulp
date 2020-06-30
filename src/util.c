@@ -89,10 +89,10 @@ void printTokenInFile(FILE* file, char* filename, Token* token) {
     else buff_mark[i] = '^';
   }
 
-  printf("\nToken '%s':\n", token->name);
-  printf("%s:%d:%d:\n\n", filename, token->lnum, token->chnum);
-  printf("%s", buff);
-  printf("%s\n", buff_mark);
+  fprintf(stderr, "\nToken '%s':\n", token->name);
+  fprintf(stderr, "%s:%d:%d:\n\n", filename, token->lnum, token->chnum);
+  fprintf(stderr, "%s", buff);
+  fprintf(stderr, "%s\n", buff_mark);
 }
 
 void printCharInFile(FILE* file, char* filename, int lnum, int chnum) {
@@ -129,9 +129,9 @@ void printCharInFile(FILE* file, char* filename, int lnum, int chnum) {
     else buff_mark[i] = '^';
   }
 
-  printf("%s: line %d, column %d:\n\n", filename, lnum, chnum);
-  printf("%s", buff);
-  printf("%s\n", buff_mark);
+  fprintf(stderr, "%s: line %d, column %d:\n\n", filename, lnum, chnum);
+  fprintf(stderr, "%s", buff);
+  fprintf(stderr, "%s\n", buff_mark);
 }
 
 void strReplaceNodeAndTokenName(char* str, char* format, Node* node) {
@@ -146,7 +146,8 @@ void strReplaceNodeAndTokenName(char* str, char* format, Node* node) {
 }
 
 void genericError(char* msg) {
-  if(cli.outputType <= OUT_DEFAULT) printf("ERROR: %s\n", msg);
+  if(cli.outputType <= OUT_DEFAULT) 
+    fprintf(stderr, ERROR_COLOR_START "ERROR" COLOR_END ": %s\n", msg);
   exit(1);
 }
 

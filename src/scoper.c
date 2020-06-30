@@ -383,10 +383,11 @@ void scoperError(char* msg, int lnum, int chnum) {
   if(cli.outputType > OUT_DEFAULT) exit(1);
 
   if(lnum > 0) {
-    printf("\nScope " ERROR_COLOR_START "ERROR" COLOR_END ": %s\n", msg);
+    fprintf(stderr, "\nScope " ERROR_COLOR_START "ERROR" COLOR_END 
+      ": %s\n", msg);
     printCharInFile(scoperState.file, scoperState.filename, lnum, chnum);
   } else {
-    printf("\nScope " ERROR_COLOR_START "ERROR" COLOR_END 
+    fprintf(stderr, "\nScope " ERROR_COLOR_START "ERROR" COLOR_END 
       ": %s\n%s.\n", msg, scoperState.filename);
   }
   exit(1);

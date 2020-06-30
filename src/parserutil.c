@@ -145,7 +145,7 @@ void assertTokenEqual(Node* node, TokenType ttype, char* msg) {
     Node* problematic = astFirstLeaf(node);
 
     if(cli.outputType <= OUT_DEFAULT) {
-      printf("Compiler bug: invalid terminal node.\n");
+      fprintf(stderr, "Compiler bug: invalid terminal node.\n");
     }
     exit(1);
   } else if(node->token->type != ttype) {
@@ -208,10 +208,11 @@ void parsError(char* msg, int lnum, int chnum) {
   if(cli.outputType > OUT_DEFAULT) exit(1);
 
   if(lnum > 0) {
-    printf("\nSyntax " ERROR_COLOR_START "ERROR" COLOR_END ": %s\n", msg);
+    fprintf(stderr, "\nSyntax " ERROR_COLOR_START "ERROR" COLOR_END ": %s\n", 
+      msg);
     printCharInFile(parserState.file, parserState.filename, lnum, chnum);
   } else {
-    printf("\nSyntax " ERROR_COLOR_START "ERROR" COLOR_END 
+    fprintf(stderr, "\nSyntax " ERROR_COLOR_START "ERROR" COLOR_END 
       ": %s\n%s.\n", msg, parserState.filename);
   }
   exit(1);

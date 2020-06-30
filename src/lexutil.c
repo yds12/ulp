@@ -58,7 +58,8 @@ void printFile(FILE* file) {
 void lexError(char* msg) {
   if(cli.outputType > OUT_DEFAULT) exit(1);
 
-  printf("Lexical ERROR: %s\n%s: line: %d, column: %d.\n", msg, 
+  fprintf(stderr, "\nLexical " ERROR_COLOR_START "ERROR" COLOR_END 
+    ": %s\n%s: line: %d, column: %d.\n", msg, 
     lexerState.filename, lexerState.lnum, lexerState.chnum);
   printCharInFile(lexerState.file, lexerState.filename,
     lexerState.lnum, lexerState.chnum);

@@ -33,7 +33,7 @@ void generateExec(char* filename, char* assemblyCode, char* outputName) {
 void writeAsmFile(char* assemblyCode) {
   FILE* asmFile = fopen(TEMP_DIR "/" ASM_FILE, "w");
   if(!asmFile) {
-    printf("Error creating temporary assembly file.\n");
+    fprintf(stderr, "Error creating temporary assembly file.\n");
     exit(1);
   }
 
@@ -46,7 +46,7 @@ void createObjectFile() {
     " -o " TEMP_DIR "/" OBJ_FILE);
 
   if(ret != 0) { // error: stop
-    printf("Assembler error. Object file not created.\n");
+    fprintf(stderr, "Assembler error. Object file not created.\n");
     removeTempDir();
     exit(1);
   }
@@ -67,7 +67,7 @@ void linkObject(char* outputName) {
   }
 
   if(ret != 0) { // error: stop
-    printf("Linker error. Executable file not created.\n");
+    fprintf(stderr, "Linker error. Executable file not created.\n");
     removeTempDir();
     exit(1);
   }
@@ -82,14 +82,14 @@ void createTempDir() {
     if(errno == ENOENT) { // directory does not exist, create it
       mkdir(TEMP_DIR, S_IRUSR | S_IWUSR | S_IXUSR);
     } else {
-      printf("Error creating temporary build directory.\n");
+      fprintf(stderr, "Error creating temporary build directory.\n");
       exit(1);
     }
   } else {
     if(S_ISDIR(s.st_mode)) { // directory exists, use it
       TEMP_DIR_EXISTED = 1;
     } else { // exists but it is not a directory
-      printf("Error: there exists a file with the same name as the "
+      fprintf(stderr, "Error: there exists a file with the same name as the "
         "temporary build directory.\n");
       exit(1);
     }
