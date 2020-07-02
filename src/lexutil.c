@@ -42,6 +42,7 @@ int isSingleCharToken(char ch) {
 }
 
 void printFile(FILE* file) {
+  if(file == stdin) return;
   if(cli.outputType > OUT_DEBUG) return;
 
   rewind(file);
