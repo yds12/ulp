@@ -19,7 +19,6 @@ STATEMENT := { STATEMENT* }
            | loop STATEMENT
            | while EXPR : STATEMENT
            | for FOR_DECLARATION , EXPR , FOR_ASSIGNMENT : STATEMENT
-           | match EXPR : { MATCH_CLAUSES }
            | break ;
            | next ;
 
@@ -42,9 +41,6 @@ EXPR := TERM
       | not EXPR
       | - EXPR
       | ( EXPR )
-
-MATCH_CLAUSES := EXPR : STATEMENT [MATCH_CLAUSES]
-               | else : STATEMENT
 
 PARAMS := TYPE IDENTIFIER [, PARAMS]
 

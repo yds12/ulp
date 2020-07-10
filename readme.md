@@ -91,10 +91,9 @@ This is an example of an AST that you might see:
 
 ## Roadmap
 
-Currently, the compiler is capable of parsing most programs not using the
-"match" construct, doing scope resolution for variables and functions and
-generating an executable for programs using a very small subset of 
-the language:
+Currently, the compiler is capable of parsing, doing scope resolution 
+for variables and functions and generating an executable for programs using 
+a subset of the language including only booleans and 32-bit integers:
 
     $ ./ulpc ../test/cases/pos/0005a_decl_expr.ul
 
