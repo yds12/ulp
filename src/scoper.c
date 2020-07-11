@@ -113,6 +113,8 @@ int bearsScope(Node* node);
 
 
 void scopeCheckerStart(FILE* file, char* filename, Node* ast) {
+  if(!ast) return; // empty program
+
   scoperState = (ScoperState) {
     .file = file,
     .filename = filename

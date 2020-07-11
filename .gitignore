@@ -2,3 +2,4 @@ inputs/*
 *.swp
 a.out
 tags
+.ulpc-temp

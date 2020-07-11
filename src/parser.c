@@ -145,11 +145,15 @@ void parserStart(FILE* file, char* filename, int nTokens, Token** tokens) {
 
   //printStack();  
 
-  if(pStack.pointer > 0 || fromStackSafe(0)->type != NTProgram) {
+  if(pStack.pointer > 0) {
     genericError("Failed to completely parse program.");
   }
 
   parserState.ast = fromStackSafe(0);
+
+  if(parserState.ast && parserState.ast->type != NTProgram) {
+    genericError("Failed to completely parse program.");
+  }
 
   checkTree(parserState.ast, parserState.nodeCount);
   graphvizAst(parserState.ast);

@@ -22,6 +22,8 @@ void createTempDir();
 void removeTempDir();
 
 void generateExec(char* filename, char* assemblyCode, char* outputName) {
+  if(!assemblyCode) return; // empty program
+
   createTempDir();
   writeAsmFile(assemblyCode);
   createObjectFile();

@@ -42,6 +42,8 @@ void codegenStart(FILE* file, char* filename, Node* ast) {
     .nLabels = 0
   };
 
+  if(!ast) return; // empty program
+
   initializeRegisters();
   postorderTraverse(ast, &emitCode);
 

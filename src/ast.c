@@ -82,6 +82,8 @@ void graphvizAstRec(Node* node) {
 }
 
 void checkTree(Node* node, int nodeCount) {
+  if(!node) return; 
+
   int id = node->id;
   int type = node->type;
   int nChildren = node->nChildren;
@@ -107,7 +109,9 @@ printf("type: %d, id: %d\n", node->type, node->id);
 //        chnode->type, chnode->nChildren);
 //    }
   }
-  for(int i = 0; i < node->nChildren; i++) 
+  for(int i = 0; i < node->nChildren; i++) {
+    if(!node->children[i]) genericError("Internal error: empty child node.");
     checkTree(node->children[i], nodeCount);
+  }
 }
 
