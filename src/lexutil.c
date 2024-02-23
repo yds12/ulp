@@ -59,8 +59,8 @@ void printFile(FILE* file) {
 void lexError(char* msg) {
   if(cli.outputType > OUT_DEFAULT) exit(1);
 
-  fprintf(stderr, "\nLexical " ERROR_COLOR_START "ERROR" COLOR_END 
-    ": %s\n%s: line: %d, column: %d.\n", msg, 
+  fprintf(stderr, "\nLexical " ERROR_COLOR_START "ERROR" COLOR_END
+    ": %s\n%s: line: %d, column: %d.\n", msg,
     lexerState.filename, lexerState.lnum, lexerState.chnum);
   printCharInFile(lexerState.file, lexerState.filename,
     lexerState.lnum, lexerState.chnum);
@@ -72,7 +72,7 @@ void printTokens() {
 
   for(int i = 0; i < lexerState.nTokens; i++) {
     Token* t = lexerState.tokens[i];
-    printf("\n\n||%s||, type:%d, pos:%d,%d\n", 
+    printf("\n\n||%s||, type:%d, pos:%d,%d\n",
       t->name, t->type, t->lnum, t->chnum);
     printTokenInFile(lexerState.file, lexerState.filename, t);
   }

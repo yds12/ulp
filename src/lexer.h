@@ -26,7 +26,7 @@ typedef struct stLexerState {
 } LexerState;
 
 // Global state of the lexer.
-LexerState lexerState;
+extern LexerState lexerState;
 
 /*
  * Starts the lexer.
@@ -39,7 +39,7 @@ LexerState lexerState;
 void lexerStart(FILE* sourcefile, char* filename);
 
 /*
- * Prints a text file. 
+ * Prints a text file.
  *
  * file: pointer to the file (should be open, will be rewinded and
  *   will not be closed).
@@ -48,15 +48,15 @@ void lexerStart(FILE* sourcefile, char* filename);
 void printFile(FILE* file);
 
 /*
- * Prints an error message and exits the program with exit code 1. 
+ * Prints an error message and exits the program with exit code 1.
  *
- * msg: message to be printed. 
+ * msg: message to be printed.
  *
  */
 void lexError(char* msg);
 
 /*
- * Checks whether a character is whitespace. 
+ * Checks whether a character is whitespace.
  *
  * character: the character to be checked.
  * returns: 1 if it is, 0 otherwise.
@@ -65,7 +65,7 @@ void lexError(char* msg);
 int isWhitespace(char character);
 
 /*
- * Checks whether a character is a letter (ASCII only). 
+ * Checks whether a character is a letter (ASCII only).
  *
  * character: the character to be checked.
  * returns: 1 if it is, 0 otherwise.
@@ -74,7 +74,7 @@ int isWhitespace(char character);
 int isAlpha(char character);
 
 /*
- * Checks whether a character is a number. 
+ * Checks whether a character is a number.
  *
  * character: the character to be checked.
  * returns: 1 if it is, 0 otherwise.
@@ -84,7 +84,7 @@ int isNum(char character);
 
 /*
  * Checks whether a character is one of the single character tokens, such
- * as (, ), %, ;, etc. 
+ * as (, ), %, ;, etc.
  *
  * character: the character to be checked.
  * returns: 1 if it is, 0 otherwise.
@@ -94,7 +94,7 @@ int isSingleCharToken(char character);
 
 /*
  * Checks whether a character could be the first in a 2-char operator, such
- * as ==, +=, ++, -= or --. 
+ * as ==, +=, ++, -= or --.
  *
  * character: the character to be checked.
  * returns: 1 if it is, 0 otherwise.

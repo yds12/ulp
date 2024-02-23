@@ -64,7 +64,7 @@ typedef enum enInstructionType {
   INS_POP
 } InstructionType;
 
-CodegenState codegenState;
+extern CodegenState codegenState;
 
 void codegenStart(FILE* file, char* filename, Node* ast);
 void appendInstruction(Node* node, InstructionType inst, char* op1, char* op2);

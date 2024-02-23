@@ -9,6 +9,8 @@
 #include "util.h"
 #include "lexer.h"
 
+LexerState lexerState;
+
 /*
  * Reads the next character of the source file and manages the related
  * lexer state variables.
@@ -19,7 +21,7 @@
 char lexerGetChar();
 
 /*
- * Adds a new token to the list of processed tokens. 
+ * Adds a new token to the list of processed tokens.
  *
  * size: the amount of characters (bytes) in this token.
  * type: type of token (identifier, integer literal, AND operator, etc.)
@@ -42,16 +44,16 @@ void eatIDKW();
 void eatNumber();
 
 /*
- * Processes comments and the division operator. 
+ * Processes comments and the division operator.
  *
  */
-void eatSlash(); 
+void eatSlash();
 
 /*
  * Processes tokens constituted of a single character, like (, ), {, }, etc.
  *
  *
- * Note: Need to improve string eating. Only valid ASCII or UTF-8 
+ * Note: Need to improve string eating. Only valid ASCII or UTF-8
  * strings should be allowed.
  *
  */
@@ -126,7 +128,7 @@ void lexerStart(FILE* sourcefile, char* sourcefilename) {
       char* format = "Unexpected character: '%c'.";
       int len = strlen(format) - 1;
       char str[len];
-      sprintf(str, format, ch); 
+      sprintf(str, format, ch);
       lexError(str);
     }
   }

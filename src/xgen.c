@@ -44,7 +44,7 @@ void writeAsmFile(char* assemblyCode) {
 }
 
 void createObjectFile() {
-  int ret = system(ASSEMBLER_CMD " " ASSEMBLER_OPT " " TEMP_DIR "/" ASM_FILE 
+  int ret = system(ASSEMBLER_CMD " " ASSEMBLER_OPT " " TEMP_DIR "/" ASM_FILE
     " -o " TEMP_DIR "/" OBJ_FILE);
 
   if(ret != 0) { // error: stop
@@ -61,7 +61,7 @@ void linkObject(char* outputName) {
     ret = system(LINKER_CMD " " TEMP_DIR "/" OBJ_FILE " -o " EXEC_FILE);
   } else { // use specified output name
     char* fmt = LINKER_CMD " " TEMP_DIR "/" OBJ_FILE " -o %s";
-    char* cmdStr = (char*) malloc(sizeof(char) * (strlen(LINKER_CMD) + 
+    char* cmdStr = (char*) malloc(sizeof(char) * (strlen(LINKER_CMD) +
       strlen(TEMP_DIR) + strlen(OBJ_FILE) + strlen(outputName) + 10));
     sprintf(cmdStr, fmt, outputName);
     ret = system(cmdStr);

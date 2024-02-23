@@ -33,20 +33,20 @@ int precedence(TokenType type) {
   if(type == TTMod) return 1;
   if(type == TTNot) return 3;
   if(type == TTAnd || type == TTOr) return 4;
-  if(type == TTGreater || type == TTGEq || type == TTEq || 
+  if(type == TTGreater || type == TTGEq || type == TTEq ||
      type == TTLess || type == TTLEq) return 5;
   return -1;
 }
 
 int isExprTerminator(TokenType type) {
-  if(type == TTColon || type == TTComma 
+  if(type == TTColon || type == TTComma
      || type == TTSemi || type == TTRPar) return 1;
-  return 0; 
+  return 0;
 }
 
 int nodeIsToken(Node* node, TokenType type) {
   if(!node) genericError("Internal error: AST node is NULL.");
-  if(node->type == NTTerminal) { 
+  if(node->type == NTTerminal) {
     if(!node->token) {
       genericError("Internal error: corrupted AST node.");
     }
@@ -84,7 +84,7 @@ void printTokenInFile(FILE* file, char* filename, Token* token) {
 
   for(int i = 0; i < BUFF_SIZE; i++) {
     if(i + 1 < token->chnum || i + 1 >= token->chnum + token->nameSize) {
-      buff_mark[i] = ' '; 
+      buff_mark[i] = ' ';
     }
     else buff_mark[i] = '^';
   }
@@ -124,7 +124,7 @@ void printCharInFile(FILE* file, char* filename, int lnum, int chnum) {
 
   for(int i = 0; i < BUFF_SIZE; i++) {
     if(i + 1 < chnum || i + 1 >= chnum + 1) {
-      buff_mark[i] = ' '; 
+      buff_mark[i] = ' ';
     }
     else buff_mark[i] = '^';
   }
@@ -142,11 +142,11 @@ void strReplaceNodeAndTokenName(char* str, char* format, Node* node) {
     char* strTokenFormat = "token '%s'";
     sprintf(strToken, strTokenFormat, node->token->name);
     sprintf(str, format, strToken);
-  } else strReplaceNodeName(str, format, type); 
+  } else strReplaceNodeName(str, format, type);
 }
 
 void genericError(char* msg) {
-  if(cli.outputType <= OUT_DEFAULT) 
+  if(cli.outputType <= OUT_DEFAULT)
     fprintf(stderr, ERROR_COLOR_START "ERROR" COLOR_END ": %s\n", msg);
   exit(1);
 }
@@ -227,7 +227,7 @@ void strReplaceNodeName(char* str, char* format, NodeType type) {
       break;
     case NTMatchSt: sprintf(str, format, "'match' statement");
       break;
-    case NTProgramPart: sprintf(str, format, 
+    case NTProgramPart: sprintf(str, format,
                                 "function declaration or statement");
       break;
     case NTStatement: sprintf(str, format, "statement");
@@ -279,7 +279,7 @@ void strReplaceNodeAbbrev(char* str, char* format, Node* node) {
     char* strTokenFormat = "%s";
     sprintf(strToken, strTokenFormat, node->token->name);
     sprintf(str, format, strToken);
-  } 
+  }
   else switch(type) {
     case NTBreakSt: sprintf(str, format, "BREAK st");
       break;
@@ -340,13 +340,13 @@ void strReplaceNodeAbbrev(char* str, char* format, Node* node) {
 
 void printNode(Node* node) {
   printf("Node {\n");
-  
+
   char nodeName[MAX_NODE_NAME];
   strReplaceNodeAbbrev(nodeName, "%s", node);
   printf("  Type: [%d] %s\n", node->type, nodeName);
   printf("  ID: %d\n", node->id);
   printf("  #Children: %d\n", node->nChildren);
-  
+
   if(node->parent) {
     char parentNodeName[MAX_NODE_NAME];
     strReplaceNodeAbbrev(parentNodeName, "%s", node->parent);
@@ -357,7 +357,7 @@ void printNode(Node* node) {
         printf("  is child #%d\n", i);
     }
   }
-  else printf("  Parent: NULL\n"); 
+  else printf("  Parent: NULL\n");
 
   if(node->symTable) {
     printf("  Has symtable: true\n");

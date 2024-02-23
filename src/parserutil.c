@@ -83,7 +83,7 @@ void stackPush(Node* node) {
 
 Node* stackPop(int n) {
   Node* node = NULL;
-  if(pStack.pointer - (n - 1) >= 0) 
+  if(pStack.pointer - (n - 1) >= 0)
     node = pStack.nodes[pStack.pointer - (n - 1)];
 
   pStack.pointer -= n;
@@ -102,7 +102,7 @@ Token lookAhead() {
 void allocChildren(Node* node, int nChildren) {
   node->children = (Node**) malloc(sizeof(Node*) * nChildren);
   node->nChildren = nChildren;
-  
+
   for(int i = 0; i < nChildren; i++) node->children[i] = NULL;
 }
 
@@ -200,7 +200,7 @@ void assertEqual(Node* node, NodeType type, char* msg) {
 void parsErrorHelper(char* format, Node* node, Node* leafNode) {
   int len = strlen(format) + MAX_NODE_NAME;
   char str[len];
-  strReplaceNodeAndTokenName(str, format, node); 
+  strReplaceNodeAndTokenName(str, format, node);
   parsError(str, leafNode->token->lnum, leafNode->token->chnum);
 }
 
@@ -208,11 +208,11 @@ void parsError(char* msg, int lnum, int chnum) {
   if(cli.outputType > OUT_DEFAULT) exit(1);
 
   if(lnum > 0) {
-    fprintf(stderr, "\nSyntax " ERROR_COLOR_START "ERROR" COLOR_END ": %s\n", 
+    fprintf(stderr, "\nSyntax " ERROR_COLOR_START "ERROR" COLOR_END ": %s\n",
       msg);
     printCharInFile(parserState.file, parserState.filename, lnum, chnum);
   } else {
-    fprintf(stderr, "\nSyntax " ERROR_COLOR_START "ERROR" COLOR_END 
+    fprintf(stderr, "\nSyntax " ERROR_COLOR_START "ERROR" COLOR_END
       ": %s\n%s.\n", msg, parserState.filename);
   }
   exit(1);

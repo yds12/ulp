@@ -21,7 +21,7 @@
 #define OUT_GRAPHVIZ 4        // outputs parse tree in Graphviz format
 
 // Global compiler options variables
-int CLI_OUTPUT_TYPE;
+extern int CLI_OUTPUT_TYPE;
 
 struct stCli {
   short outputType;
@@ -29,7 +29,7 @@ struct stCli {
   int outputIdx;
 };
 
-struct stCli cli;
+extern struct stCli cli;
 
 void parseCLArgs(int argc, char ** argv);
 

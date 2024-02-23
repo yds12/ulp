@@ -31,13 +31,13 @@ typedef struct stParserState {
 } ParserState;
 
 // Global state of the parser
-ParserState parserState;
+extern ParserState parserState;
 
 // The stack of subtrees of the LR parser
-ParserStack pStack;
+extern ParserStack pStack;
 
 // The list of pointers to the nodes that comprise the trees
-Node** pNodes;
+extern Node** pNodes;
 
 /*
  * Starts the parser.
@@ -86,7 +86,7 @@ Node* createAndPush(NodeType type, int nChildren, ...);
 /*
  * Pushes a node onto the stack. This should be done either when a new token
  * is read and turned into a terminal node, or when a number of nodes on
- * the top of the stack match a production rule and are reduced into a new 
+ * the top of the stack match a production rule and are reduced into a new
  * node. This new node must be pushed into the stack.
  *
  * node: the node to be pushed.
@@ -126,7 +126,7 @@ void allocChildren(Node* node, int nChildren);
 Token lookAhead();
 
 /*
- * Gets a node at a specified offset from the top of the stack without 
+ * Gets a node at a specified offset from the top of the stack without
  * popping it.
  *
  * offset: 0 to get the node on the top of the stack, 1 for next, and so on...
@@ -136,32 +136,32 @@ Token lookAhead();
 Node* fromStackSafe(int offset);
 
 /*
- * Checks whether the node type is a type of statement (such as an if 
+ * Checks whether the node type is a type of statement (such as an if
  * statement, a while statement, a assignment statement, etc.).
  *
- * type: the node type to be checked. 
+ * type: the node type to be checked.
  * returns: 1 if it is a type of statement, 0 otherwise.
  *
  */
 int isSubStatement(NodeType type);
 
 /*
- * Checks whether a token type is a assignment operator type (=, +=, -=, etc.). 
+ * Checks whether a token type is a assignment operator type (=, +=, -=, etc.).
  *
- * type: the token type to be checked. 
+ * type: the token type to be checked.
  * returns: 1 if it is a assignment operator type, 0 otherwise.
  *
  */
 int isAssignmentOp(TokenType type);
 
 /*
- * Checks whether the node is a terminal node and that its token has the 
+ * Checks whether the node is a terminal node and that its token has the
  * specified type. If not, displays a syntax error and terminates the program.
  *
  * node: the node that will be checked.
  * type: the type that the token of this node must have.
- * msg: an error message to be displayed if the node's token does not have 
- *   the correct type. This message will be preppended to a standard message 
+ * msg: an error message to be displayed if the node's token does not have
+ *   the correct type. This message will be preppended to a standard message
  *   saying that a type was expect but another found.
  *
  */
@@ -181,7 +181,7 @@ void assertTokenEqual(Node* node, TokenType ttype, char* msg);
 void assertEqual(Node* node, NodeType type, char* msg);
 
 /*
- * Outputs a syntax error message and terminates the program. 
+ * Outputs a syntax error message and terminates the program.
  *
  * format: a format string for the error message containing the error message
  *   and one %s that will be replaced by the node/token name.
@@ -193,7 +193,7 @@ void assertEqual(Node* node, NodeType type, char* msg);
 void parsErrorHelper(char* format, Node* node, Node* leafNode);
 
 /*
- * Outputs a syntax error message and terminates the program. 
+ * Outputs a syntax error message and terminates the program.
  *
  * msg: error message.
  * lnum: line number where the error is found.
@@ -203,7 +203,7 @@ void parsErrorHelper(char* format, Node* node, Node* leafNode);
 void parsError(char* msg, int lnum, int chnum);
 
 /*
- * Debug function. Prints the current stack. 
+ * Debug function. Prints the current stack.
  *
  *
  */

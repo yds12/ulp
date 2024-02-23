@@ -7,9 +7,11 @@
 #include "cli.h"
 #include "scoper.h"
 
-// initial length for the code string of a node, not considering user 
+// initial length for the code string of a node, not considering user
 // defined identifiers
 #define INITIAL_CODE_SIZE 30
+
+CodegenState codegenState;
 
 char getReg();
 char* getRegName(char regNum);
@@ -50,7 +52,7 @@ void codegenStart(FILE* file, char* filename, Node* ast) {
   if(ast->cgData && ast->cgData->code) {
     codegenState.code = ast->cgData->code;
     printNodeCode(ast);
-  } 
+  }
   else genericError("Code generator bug: no code generated");
 }
 
@@ -80,7 +82,7 @@ void emitCode(Node* node) {
 
     if(node->nChildren > 0) {
       pullChildCode(node, 0);
-      appendInstruction(node, INS_SETRET, 
+      appendInstruction(node, INS_SETRET,
         getRegName(node->children[0]->cgData->reg), NULL);
       freeNodeReg(node->children[0]);
     }
@@ -181,8 +183,8 @@ void emitForCode(Node* node) {
   // for their loop variable
   char hasEpilogue = 0;
 
-  if(isMlsNode(bodyNode) && node->parent->type != NTFunction 
-     && bodyNode->symTable) { 
+  if(isMlsNode(bodyNode) && node->parent->type != NTFunction
+     && bodyNode->symTable) {
     hasEpilogue = 1;
     // Save stack pointer as base pointer
     appendInstruction(node, INS_PUSH, "rbp", NULL);
@@ -219,7 +221,7 @@ void emitForCode(Node* node) {
     case TTLEq: iType = INS_JG; break;
   }
   pullChildCode(node, 1); // for condition
-  appendInstruction(node, iType, node->cgData->breakLabel, NULL); 
+  appendInstruction(node, iType, node->cgData->breakLabel, NULL);
   pullChildCode(node, 3); // body
   appendInstruction(node, INS_JMP, node->cgData->nextLabel, NULL);
   appendInstruction(node, INS_LABEL, node->cgData->breakLabel, NULL);
@@ -261,7 +263,7 @@ void emitWhileCode(Node* node) {
     case TTLess: iType = INS_JGE; break;
     case TTLEq: iType = INS_JG; break;
   }
-  appendInstruction(node, iType, node->cgData->breakLabel, NULL); 
+  appendInstruction(node, iType, node->cgData->breakLabel, NULL);
   pullChildCode(node, 1); // body
   appendInstruction(node, INS_JMP, node->cgData->nextLabel, NULL);
   appendInstruction(node, INS_LABEL, node->cgData->breakLabel, NULL);
@@ -286,7 +288,7 @@ void emitCallCode(Node* node) {
   // copy arguments to the correct registers
   if(node->nChildren > 1) {
     for(int i = 0; i < node->nChildren - 1; i++) {
-      appendInstruction(node, INS_MOV, 
+      appendInstruction(node, INS_MOV,
         getArgRegName(i),
         getRegName(node->children[i + 1]->cgData->reg));
       freeNodeReg(node->children[i + 1]);
@@ -340,7 +342,7 @@ void emitStatementCode(Node* node) {
       pullChildCode(node, i);
     }
   }
-  else if(node->nChildren == 1) { 
+  else if(node->nChildren == 1) {
     pullChildCode(node, 0);
   } else {
     char statementBlock = 1;
@@ -352,8 +354,8 @@ void emitStatementCode(Node* node) {
     char hasEpilogue = 0;
 
     if(statementBlock) {
-      if(isMlsNode(node) && node->parent->type != NTFunction 
-         && node->symTable) { 
+      if(isMlsNode(node) && node->parent->type != NTFunction
+         && node->symTable) {
         hasEpilogue = 1;
         // Save stack pointer as base pointer
         appendInstruction(node, INS_PUSH, "rbp", NULL);
@@ -402,7 +404,7 @@ void emitProgramCode(Node* node) {
     if(node->children[i]->type == NTProgramPart
        && node->children[i]->nChildren == 1
        && node->children[i]->children[0]->type == NTFunction
-       && node->children[i]->cgData 
+       && node->children[i]->cgData
        && node->children[i]->cgData->code) {
       pullChildCode(node, i);
     }
@@ -415,7 +417,7 @@ void emitProgramCode(Node* node) {
     if(node->children[i]->type == NTProgramPart
        && node->children[i]->nChildren == 1
        && node->children[i]->children[0]->type != NTFunction
-       && node->children[i]->cgData 
+       && node->children[i]->cgData
        && node->children[i]->cgData->code) {
       pullChildCode(node, i);
     }
@@ -455,7 +457,7 @@ void emitFunctionCode(Node* node) {
 
   char* fName = node->children[0]->children[0]->token->name;
   appendInstruction(node, INS_LABEL, fName, NULL);
-  
+
   // allocate stack space for arguments and local variables if needed
   char stackSpace[10];
   Node* mlsNode = getMlsNode(node->children[2]);
@@ -469,7 +471,7 @@ void emitFunctionCode(Node* node) {
       Symbol* argSym = mlsNode->symTable->symbols[i];
       if(argSym->type == STArg) {
         char* regName = getArgRegName(argSym->pos);
-        appendInstruction(node, INS_MOV, 
+        appendInstruction(node, INS_MOV,
           getSymbolRef(argSym, node),
           regName);
         free(regName);
@@ -499,7 +501,7 @@ void emitIfCode(Node* node) {
     genericError("Compiler bug: expression not found for 'if' condition.");
 
   if(condNode->nChildren == 3) { // binary expression
-    if(condNode->children[1]->nChildren < 1 
+    if(condNode->children[1]->nChildren < 1
        || condNode->children[1]->children[0]->type != NTTerminal
        || !condNode->children[1]->children[0]->token)
       genericError("Compiler bug: operator missing.");
@@ -564,7 +566,7 @@ void emitAssignCode(Node* node) {
     }
     else if(node->children[1]->token->type == TTAdd ||
             node->children[1]->token->type == TTSub) {
-      InstructionType iType = 
+      InstructionType iType =
         (node->children[1]->token->type == TTAdd) ? INS_ADD : INS_SUB;
 
       allocateReg(node);
@@ -618,7 +620,7 @@ void emitExprCode(Node* node) {
       if(token->type == TTTrue) litValue = "1";
       else if(token->type == TTFalse) litValue = "0";
 
-      appendInstruction(node, INS_MOV, 
+      appendInstruction(node, INS_MOV,
         getRegName(node->cgData->reg), litValue);
     } else if(node->children[0]->type == NTIdentifier) {
       createCgData(node);
@@ -635,7 +637,7 @@ void emitExprCode(Node* node) {
       pullChildCode(node, 0);
       node->cgData->reg = node->children[0]->cgData->reg;
     }
-  } 
+  }
   else if(node->nChildren == 2) {
     if(node->children[0]->type == NTBinaryOp) {
       Token* opToken = node->children[0]->children[0]->token;
@@ -681,20 +683,20 @@ void emitExprCode(Node* node) {
       pullChildCode(node, 2);
 
       if(opToken->type == TTDiv || opToken->type == TTMod) { // division/mod
-        appendInstruction(node, INS_DIVISION, 
+        appendInstruction(node, INS_DIVISION,
           getRegName(node->children[0]->cgData->reg),
           getRegName(node->children[2]->cgData->reg));
 
         node->cgData->reg = node->children[0]->cgData->reg;
 
-        InstructionType iType = (opToken->type == TTDiv) ? 
+        InstructionType iType = (opToken->type == TTDiv) ?
           INS_GETQUOTIENT : INS_GETREMAINDER;
 
         appendInstruction(node, iType, getRegName(node->cgData->reg), NULL);
         freeNodeReg(node->children[2]);
       } else { // other binary operations
         InstructionType iType;
-        
+
         switch(opToken->type) {
           case TTPlus: iType = INS_ADD; break;
           case TTMinus: iType = INS_SUB; break;
@@ -720,7 +722,7 @@ void emitExprCode(Node* node) {
         freeNodeReg(node->children[2]);
       }
     }
-  } 
+  }
 }
 
 char* getLabel() {
@@ -731,7 +733,7 @@ char* getLabel() {
 }
 
 void pullChildCode(Node* node, int childNumber) {
-  if(node->children[childNumber]->cgData && 
+  if(node->children[childNumber]->cgData &&
      node->children[childNumber]->cgData->code) {
     appendNodeCode(node, node->children[childNumber]->cgData->code);
     free(node->children[childNumber]->cgData->code);
@@ -785,22 +787,22 @@ void createCgData(Node* node) {
 }
 
 Node* getBreakable(Node* node) {
-  if(node->type == NTLoopSt || node->type == NTWhileSt 
+  if(node->type == NTLoopSt || node->type == NTWhileSt
      || node->type == NTForSt) return node;
   if(!node->parent) return NULL;
   return getBreakable(node->parent);
 }
 
 void printNodeCode(Node* node) {
-  if(cli.outputType > OUT_DEBUG) return; 
+  if(cli.outputType > OUT_DEBUG) return;
 
   if(node->cgData) {
     printf("\n%s\n", node->cgData->code);
-  } 
+  }
 }
 
 void printRegs() {
-  if(cli.outputType > OUT_DEBUG) return; 
+  if(cli.outputType > OUT_DEBUG) return;
   for(int i = 0; i < N_GPR; i++) {
     if(codegenState.busyRegisters[i]) printf("1");
     else printf("0");

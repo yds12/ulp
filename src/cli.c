@@ -3,6 +3,8 @@
 #include <string.h>
 #include "cli.h"
 
+struct stCli cli;
+
 void processCLArg(char* arg, int index);
 void setDefaultOptions();
 void displayHelp();
@@ -40,13 +42,13 @@ void processCLArg(char* arg, int index) {
         else if(arg[1] == 'o') cli.outputIdx = index + 1;
         break;
       case 6:
-        if(strncmp("--help", arg, len) == 0) 
+        if(strncmp("--help", arg, len) == 0)
         displayHelp();
         break;
       case 8:
-        if(strncmp("--silent", arg, len) == 0) 
+        if(strncmp("--silent", arg, len) == 0)
           cli.outputType = OUT_SILENT;
-        else if(strncmp("--cdebug", arg, len) == 0) 
+        else if(strncmp("--cdebug", arg, len) == 0)
           cli.outputType = OUT_DEBUG;
         break;
       case 9:
@@ -57,7 +59,7 @@ void processCLArg(char* arg, int index) {
         }
         break;
       case 10:
-        if(strncmp("--graphviz", arg, len) == 0) 
+        if(strncmp("--graphviz", arg, len) == 0)
           cli.outputType = OUT_GRAPHVIZ;
         break;
     }

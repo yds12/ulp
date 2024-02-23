@@ -5,6 +5,10 @@
 
 #define DEBUG
 
+ParserState parserState;
+ParserStack pStack;
+Node** pNodes;
+
 /*
  * The shift operation in LR parsers reads a new token and put it onto the
  * stack as a terminal node.
@@ -24,7 +28,7 @@ void shift();
 int reduce();
 
 /*
- * Reduces when the top of the stack is a function argument. 
+ * Reduces when the top of the stack is a function argument.
  *
  * returns: 1 if there was a reduction, 0 otherwise.
  *
@@ -32,7 +36,7 @@ int reduce();
 int reduceArg();
 
 /*
- * Reduces when the top of the stack is a semicolon. 
+ * Reduces when the top of the stack is a semicolon.
  *
  * returns: 1 if there was a reduction, 0 otherwise.
  *
@@ -40,7 +44,7 @@ int reduceArg();
 int reduceSemi();
 
 /*
- * Reduces when the top of the stack is an expression. 
+ * Reduces when the top of the stack is an expression.
  *
  * returns: 1 if there was a reduction, 0 otherwise.
  *
@@ -48,7 +52,7 @@ int reduceSemi();
 int reduceExpression();
 
 /*
- * Reduces when the top of the stack is a statement. 
+ * Reduces when the top of the stack is a statement.
  *
  * returns: 1 if there was a reduction, 0 otherwise.
  *
@@ -56,7 +60,7 @@ int reduceExpression();
 int reduceStatement();
 
 /*
- * Reduces when the top of the stack is a right parenthesis: ")". 
+ * Reduces when the top of the stack is a right parenthesis: ")".
  *
  * returns: 1 if there was a reduction, 0 otherwise.
  *
@@ -64,7 +68,7 @@ int reduceStatement();
 int reduceRPar();
 
 /*
- * Reduces when the top of the stack is a right brace: "}". 
+ * Reduces when the top of the stack is a right brace: "}".
  *
  * returns: 1 if there was a reduction, 0 otherwise.
  *
@@ -72,7 +76,7 @@ int reduceRPar();
 int reduceRBrace();
 
 /*
- * Reduces when the top of the stack is a function call expression. 
+ * Reduces when the top of the stack is a function call expression.
  *
  * returns: 1 if there was a reduction, 0 otherwise.
  *
@@ -80,7 +84,7 @@ int reduceRBrace();
 int reduceFunctionCallExpr();
 
 /*
- * Reduces when the top of the stack is a call statement. 
+ * Reduces when the top of the stack is a call statement.
  *
  * returns: 1 if there was a reduction, 0 otherwise.
  *
@@ -88,7 +92,7 @@ int reduceFunctionCallExpr();
 int reduceFunctionCallSt();
 
 /*
- * Reduces when the top of the stack is an identifier. 
+ * Reduces when the top of the stack is an identifier.
  *
  * returns: 1 if there was a reduction, 0 otherwise.
  *
@@ -96,7 +100,7 @@ int reduceFunctionCallSt();
 int reduceIdentifier();
 
 /*
- * The final reduction. Reduces the stack when all nodes are of type 
+ * The final reduction. Reduces the stack when all nodes are of type
  * "program part" to create a single "program" node.
  *
  */
@@ -106,15 +110,15 @@ void reduceRoot();
  * Replaces the current stack top with a parent node of a specified type. The
  * current node at the top of the stack will be a child of this new node.
  *
- * type: the type of the node that must created. 
+ * type: the type of the node that must created.
  *
  */
 void singleParent(NodeType type);
 
 /*
- * Checks whether a certain node type can come before a statement. 
+ * Checks whether a certain node type can come before a statement.
  *
- * node: the node whose type must be checked. 
+ * node: the node whose type must be checked.
  * returns: 1 if it this node can precede a statement, 0 otherwise.
  *
  */
@@ -122,8 +126,8 @@ int canPrecedeStatement(Node* node);
 
 
 void parserStart(FILE* file, char* filename, int nTokens, Token** tokens) {
-  parserState = (ParserState) { 
-    .file = file, 
+  parserState = (ParserState) {
+    .file = file,
     .filename = filename,
     .nextToken = 0,
     .nTokens = nTokens,
@@ -138,12 +142,12 @@ void parserStart(FILE* file, char* filename, int nTokens, Token** tokens) {
     int continueReducing = 0;
 
     do {
-      //printStack();  
-      continueReducing = reduce(); 
+      //printStack();
+      continueReducing = reduce();
     } while(continueReducing);
   }
 
-  //printStack();  
+  //printStack();
 
   if(pStack.pointer > 0) {
     genericError("Failed to completely parse program.");
@@ -188,7 +192,7 @@ int reduce() {
       // independent declaration
       singleParent(NTProgramPart);
       continueReducing = 1;
-    } else if(prevNode->type == NTStatement 
+    } else if(prevNode->type == NTStatement
               || nodeIsToken(prevNode, TTLBrace)) {
       // independent declaration in block
       singleParent(NTStatement);
@@ -197,7 +201,7 @@ int reduce() {
     }
   } else if(isSubStatement(curNode->type)) {
     // Substatements: NTIfSt, NTNoop, NTNextSt, NTBreakSt, NTWhileSt,
-    // NTMatchSt, NTLoopSt. 
+    // NTMatchSt, NTLoopSt.
     singleParent(NTStatement);
     continueReducing = 1;
   } else if(curNode->type == NTExpression) {
@@ -207,7 +211,7 @@ int reduce() {
        || prevNode->type == NTProgramPart) { // TODO call statement (WRONG!)
       singleParent(NTStatement);
       continueReducing = 1;
-    } else { // call expression 
+    } else { // call expression
       singleParent(NTExpression);
       continueReducing = 1;
     }
@@ -246,7 +250,7 @@ int reduce() {
     } else if(ttype == TTRBrace) {
       continueReducing = reduceRBrace();
     } else if((ttype == TTIncr || ttype == TTDecr) && laType == TTColon) {
-      // ID++:   or   ID--:   in FOR statement 
+      // ID++:   or   ID--:   in FOR statement
       if(!prevNode) {
         parsErrorHelper("Beginning program with %s.",
           curNode, astFirstLeaf(curNode));
@@ -272,7 +276,7 @@ int reduceArg() {
 
   if(!prevNode) {
     parsError(
-      "Declaration of parameters at the beginning of the program.", 1, 1); 
+      "Declaration of parameters at the beginning of the program.", 1, 1);
   }
 
   if(laType == TTArrow) { // end of function parameters declaration
@@ -284,7 +288,7 @@ int reduceArg() {
       idNode = fromStackSafe(idIndex);
       if(!idNode) {
         Node* problematic = astFirstLeaf(prevNode);
-        parsError("Bad declaration of parameters.", problematic->token->lnum, 
+        parsError("Bad declaration of parameters.", problematic->token->lnum,
           problematic->token->chnum);
       }
 
@@ -303,7 +307,7 @@ int reduceArg() {
       nodePtr->children[i]->parent = nodePtr;
     }
 
-    stackPop(1 + (nParams - 1) * 2); 
+    stackPop(1 + (nParams - 1) * 2);
     stackPush(nodePtr);
     reduced = 1;
   }
@@ -322,7 +326,7 @@ int reduceRBrace() {
     prevNode = fromStackSafe(lbraceIdx);
     if(!prevNode) { // error
       Node* problematic = astFirstLeaf(prevNode);
-      parsError("Malformed block of statements.", problematic->token->lnum, 
+      parsError("Malformed block of statements.", problematic->token->lnum,
         problematic->token->chnum);
     }
 
@@ -346,12 +350,12 @@ int reduceRBrace() {
       nodePtr->children[i]->parent = nodePtr;
     }
 
-    stackPop(nStatements + 2); 
+    stackPop(nStatements + 2);
     stackPush(nodePtr);
     reduced = 1;
   } else { // match statement
   }
-  
+
   return reduced;
 }
 
@@ -376,7 +380,7 @@ int reduceStatement() {
     if(!iwmfNode) {
       Node* problematic = astFirstLeaf(curNode);
       parsError("Before ':' and a statement, an 'if', 'while', "
-        "'for' or 'match' construct is expected.", 
+        "'for' or 'match' construct is expected.",
         problematic->token->lnum, problematic->token->chnum);
     }
 
@@ -389,7 +393,7 @@ int reduceStatement() {
       }
 
       // if statement
-      if(laType == TTElse) { 
+      if(laType == TTElse) {
         // with else clause -- do nothing now
       } else { // without else
         stackPop(4);
@@ -414,7 +418,7 @@ int reduceStatement() {
       if(pStack.pointer < 7) {
         Node* problematic = astFirstLeaf(curNode);
         parsError("Before ':' and a statement, an 'if', 'while', "
-          "'for' or 'match' construct is expected.", 
+          "'for' or 'match' construct is expected.",
           problematic->token->lnum, problematic->token->chnum);
       }
 
@@ -433,14 +437,14 @@ int reduceStatement() {
       assertEqual(assignNode, NTStatement, "Bad 'for' statement.");
 
       stackPop(8);
-      Node* nodePtr = createAndPush(NTForSt, 4, 
+      Node* nodePtr = createAndPush(NTForSt, 4,
         declNode, exprNode, assignNode, curNode);
       reduced = 1;
     }
   } else if(nodeIsToken(prevNode, TTElse)) {
     if(pStack.pointer < 5) { // error: incomplete if statement
       Node* problematic = astFirstLeaf(prevNode);
-      parsError("Malformed 'if' statement.", problematic->token->lnum, 
+      parsError("Malformed 'if' statement.", problematic->token->lnum,
         problematic->token->chnum);
     }
 
@@ -464,7 +468,7 @@ int reduceStatement() {
     Node* prev3 = fromStackSafe(3);
     if(!prev3) {
       Node* problematic = astFirstLeaf(curNode);
-      parsError("Bad function declaration.", 
+      parsError("Bad function declaration.",
         problematic->token->lnum, problematic->token->chnum);
     }
 
@@ -485,7 +489,7 @@ int reduceStatement() {
 
       if(!prev4) {
         Node* problematic = astFirstLeaf(curNode);
-        parsError("Bad function declaration.", 
+        parsError("Bad function declaration.",
           problematic->token->lnum, problematic->token->chnum);
       }
 
@@ -512,7 +516,7 @@ int reduceRPar() {
 
   if(!prevNode) {
     Node* problematic = astLastLeaf(curNode);
-    parsError("Program beginning with ')'.", 
+    parsError("Program beginning with ')'.",
       problematic->token->lnum, problematic->token->chnum);
   }
   if(prevNode->type == NTProgramPart || prevNode->type == NTStatement) {
@@ -550,7 +554,7 @@ int reduceFunctionCallSt() {
 
       if(!idNode) { // this should never happen (as param checks for this)
         Node* problematic = astFirstLeaf(idNode);
-        parsError("Malformed function call statement.", 
+        parsError("Malformed function call statement.",
           problematic->token->lnum, problematic->token->chnum);
       }
 
@@ -573,7 +577,7 @@ int reduceFunctionCallSt() {
 
     // we know there is at least one param
     // ID PARAM [, PARAM] ;
-    stackPop(3 + (nParams - 1) * 2); 
+    stackPop(3 + (nParams - 1) * 2);
 
     stackPush(nodePtr);
     reduced = 1;
@@ -606,7 +610,7 @@ int reduceFunctionCallExpr() {
 
       if(!idNode) { // this should never happen (as param checks for this)
         Node* problematic = astFirstLeaf(prevNode);
-        parsError("Malformed function call expression.", 
+        parsError("Malformed function call expression.",
           problematic->token->lnum, problematic->token->chnum);
       }
     }
@@ -642,15 +646,15 @@ int reduceIdentifier() {
   Node* prevNode = fromStackSafe(1);
   TokenType laType = lookAhead().type;
 
-  if(laType == TTId || laType == TTLPar || laType == TTNot 
-     || isLiteral(laType)) 
+  if(laType == TTId || laType == TTLPar || laType == TTNot
+     || isLiteral(laType))
   {
     // is function ID (will be reduced later)
   } else if(nodeIsToken(prevNode, TTFunc)) {
     // is function ID (will be reduced later)
   }
   else { // is variable
-    if(laType == TTIncr || laType == TTDecr || 
+    if(laType == TTIncr || laType == TTDecr ||
        laType == TTAdd || laType == TTSub || laType == TTAssign) {
       // assignment statements  -- do nothing
     }
@@ -659,11 +663,11 @@ int reduceIdentifier() {
       Node* prevPrevNode = fromStackSafe(2);
 
       if(!prevPrevNode || prevPrevNode->type == NTProgramPart
-         || prevPrevNode->type == NTStatement 
+         || prevPrevNode->type == NTStatement
          || nodeIsToken(prevPrevNode, TTLBrace))
       {
         // variable declaration, will reduce later
-      } else if(nodeIsToken(prevPrevNode, TTFor)) { 
+      } else if(nodeIsToken(prevPrevNode, TTFor)) {
         // is part of for statement  -- do nothing
       } else { // is parameter
         stackPop(2);
@@ -690,7 +694,7 @@ int reduceExpression() {
 
   if(!prevNode) { // error: starting program with expression
     Node* problematic = astLastLeaf(curNode);
-    parsError("Program beginning with expression.", 
+    parsError("Program beginning with expression.",
       problematic->token->lnum, problematic->token->chnum);
   }
   else if(prevNode->type == NTProgramPart || prevNode->type == NTStatement) {
@@ -704,9 +708,9 @@ int reduceExpression() {
       // TODO: make a check for illegal beginnings so we don't have to check
       // this all the time
       Node* problematic = astFirstLeaf(prevNode);
-      parsError("Program beginning with parenthesis.", 
+      parsError("Program beginning with parenthesis.",
         problematic->token->lnum, problematic->token->chnum);
-    } else if(prevPrevNode->type == NTIdentifier) { 
+    } else if(prevPrevNode->type == NTIdentifier) {
       if(laType == TTComma || laType == TTRPar) {
         // ID ( EXPR ,   or   ID ( EXPR )   -- call parameter
         singleParent(NTCallParam);
@@ -719,7 +723,7 @@ int reduceExpression() {
       // TODO: make a check for illegal beginnings so we don't have to check
       // this all the time
       Node* problematic = astFirstLeaf(prevNode);
-      parsError("Program beginning with a comma.", 
+      parsError("Program beginning with a comma.",
         problematic->token->lnum, problematic->token->chnum);
     } else if(prevPrevNode->type == NTCallParam) { // another call param
       if(isExprTerminator(laType)) { // expression is finished
@@ -747,14 +751,14 @@ int reduceExpression() {
           Node* nodePtr = createAndPush(NTExpression, 2, prevNode, curNode);
           reduced = 1;
         } else {
-          // If we see a OP EXPR sequence, there must be an EXPR before that 
+          // If we see a OP EXPR sequence, there must be an EXPR before that
           // (except if it is a minus)
           parsErrorHelper("Expected expression before operator, found %s.",
             prevPrevNode, astLastLeaf(prevPrevNode));
         }
       } else { // EXPR OP EXPR TERMINATOR sequence, EXPR OP EXPR => EXPR
         stackPop(3);
-        Node* nodePtr = createAndPush(NTExpression, 3, 
+        Node* nodePtr = createAndPush(NTExpression, 3,
           prevPrevNode, prevNode, curNode);
         reduced = 1;
       }
@@ -773,7 +777,7 @@ int reduceExpression() {
         assertTokenEqual(prevNode, TTAssign, "Bad 'for' statement.");
 
         stackPop(4);
-        Node* nodePtr = createAndPush(NTDeclaration, 3, 
+        Node* nodePtr = createAndPush(NTDeclaration, 3,
           typeNode, prevPrevNode, curNode);
         reduced = 1;
       }
@@ -789,13 +793,13 @@ int reduceExpression() {
 
         if(!assignNode) {
           Node* problematic = astFirstLeaf(curNode);
-          parsError("Beginning program with expression.", 
+          parsError("Beginning program with expression.",
             problematic->token->lnum, problematic->token->chnum);
         }
 
         if(!varNode) {
           Node* problematic = astFirstLeaf(curNode);
-          parsError("Beginning program with assignment symbol.", 
+          parsError("Beginning program with assignment symbol.",
             problematic->token->lnum, problematic->token->chnum);
         }
 
@@ -813,7 +817,7 @@ int reduceExpression() {
         }
 
         stackPop(3);
-        Node* nodePtr = createAndPush(NTAssignment, 3, 
+        Node* nodePtr = createAndPush(NTAssignment, 3,
           varNode, assignNode, curNode);
         reduced = 1;
       }
@@ -826,13 +830,13 @@ int reduceExpression() {
           Node* nodePtr = createAndPush(NTExpression, 2, prevNode, curNode);
           reduced = 1;
         } else {
-          // If we see a OP EXPR sequence, there must be an EXPR before that 
+          // If we see a OP EXPR sequence, there must be an EXPR before that
           // (except if it is a minus)
           parsErrorHelper("Expected expression before operator, found %s.",
             prevPrevNode, astLastLeaf(prevPrevNode));
         }
-      } else if(precedence(laType) >= 
-                precedence(prevNode->children[0]->token->type)){ 
+      } else if(precedence(laType) >=
+                precedence(prevNode->children[0]->token->type)){
         // EXPR OP EXPR OP sequence, reduce if the previous has precedence
         // (<= value for precedence()), otherwise do nothing
         stackPop(3);
@@ -861,7 +865,7 @@ int reduceSemi() {
   if(!prevNode || prevNode->type == NTProgramPart) {
     singleParent(NTNoop);
     reduced = 1;
-  } 
+  }
   else if(prevNode->type == NTTerminal) {
     TokenType ttype = prevNode->token->type;
 
@@ -883,7 +887,7 @@ int reduceSemi() {
       Node* nodePtr = createAndPush(NTReturnSt, 0);
       reduced = 1;
     }
-  } 
+  }
   else if(prevNode->type == NTExpression) {
     if(prevPrevNode && prevPrevNode->type == NTTerminal) {
       if(prevPrevNode->token->type == TTAssign ||
@@ -902,10 +906,10 @@ int reduceSemi() {
 
             Node* problematic = astFirstLeaf(prev3);
             parsError(str, problematic->token->lnum, problematic->token->chnum);
-          } 
+          }
           else if(prev4->type == NTProgramPart || prev4->type == NTStatement
             || (nodeIsToken(prev4, TTColon) || nodeIsToken(prev4, TTElse) ||
-            nodeIsToken(prev4, TTLBrace))) 
+            nodeIsToken(prev4, TTLBrace)))
           {
             // ID ASSIGN_OP EXPR ;  -- assignment
             stackPop(4);

@@ -9,6 +9,8 @@
 // Initial size of a symbol table
 #define MAX_INITIAL_SYMBOLS 10
 
+ScoperState scoperState;
+
 /*
  * Tries to add a symbol to the symbol table of the nearest scope for the
  * specified node.
@@ -45,7 +47,7 @@ Symbol* findSymbol(Node* scopeNode, Token* symToken);
  * Displays a scope error message and terminates the program with exit code 1
  * (error).
  *
- * msg: the message text. 
+ * msg: the message text.
  * lnum: line number of the error.
  * chnum: character/column number in the line where the error is found.
  *
@@ -56,8 +58,8 @@ void scoperError(char* msg, int lnum, int chnum);
  * Finds the nearest scope-bearing node (a node with a symbol table) above a
  * specified node.
  *
- * node: the node where to start the search. 
- * returns: the closest ancestor node (not counting itself) containg a 
+ * node: the node where to start the search.
+ * returns: the closest ancestor node (not counting itself) containg a
  *   symbol table.
  *
  */
@@ -66,7 +68,7 @@ Node* getScopeAbove(Node* node);
 /*
  * Allocates memory for a symbol table for a node, and initializes its values.
  *
- * scopeNode: the scope-bearing node that will hold the symbol table. 
+ * scopeNode: the scope-bearing node that will hold the symbol table.
  * returns: a pointer to the symbol table.
  *
  */
@@ -76,17 +78,17 @@ SymbolTable* createSymTable(Node* scopeNode);
  * Adds a symbol to the symbol table of a specified scope-bearing node,
  * managing memory space for the table as needed.
  *
- * scopeNode: the scope-bearing node whose symbol table will hold the 
- *   new symbol. 
- * symbol: the symbol to be added. 
+ * scopeNode: the scope-bearing node whose symbol table will hold the
+ *   new symbol.
+ * symbol: the symbol to be added.
  *
  */
 void addSymbol(Node* scopeNode, Symbol symbol);
 
 /*
- * Debug function: prints the symbol table of a node. 
+ * Debug function: prints the symbol table of a node.
  *
- * scopeNode: the node whose symbol table is to be printed. 
+ * scopeNode: the node whose symbol table is to be printed.
  *
  */
 void printSymTable(Node* scopeNode);
@@ -96,7 +98,7 @@ void printSymTable(Node* scopeNode);
  * This must be done before any other scope checking is done. This allows for
  * functions to be called regardless of where they are defined.
  *
- * ast: the root node of the AST. 
+ * ast: the root node of the AST.
  *
  */
 void hoistFunctions(Node* ast);
@@ -105,7 +107,7 @@ void hoistFunctions(Node* ast);
  * Returns whether the specified node is a scope-bearing node (i.e. has a
  * symbol table).
  *
- * node: node to be checked. 
+ * node: node to be checked.
  * returns: 1 if it is a scope-bearing node, 0 otherwise.
  *
  */
@@ -128,10 +130,10 @@ void scopeCheckerStart(FILE* file, char* filename, Node* ast) {
 }
 
 void tryAddSymbol(Node* node, Token* token, SymbolType type) {
-  Symbol newSym = { 
-    .token = token, 
+  Symbol newSym = {
+    .token = token,
     .type = type
-  }; 
+  };
   Symbol* oldSym = lookupSymbol(node, token);
 
   if(oldSym) {
@@ -151,13 +153,13 @@ SymbolTable* createSymTable(Node* scopeNode) {
   scopeNode->symTable->nLocalVars = 0;
   scopeNode->symTable->nStackVars = 0;
   scopeNode->symTable->maxSize = MAX_INITIAL_SYMBOLS;
-  scopeNode->symTable->symbols = (Symbol**) 
+  scopeNode->symTable->symbols = (Symbol**)
     malloc(sizeof(Symbol*) * scopeNode->symTable->maxSize);
 
   Node* scopeAbove = getScopeAbove(scopeNode);
   if(scopeAbove && scopeAbove->symTable) {
     scopeNode->symTable->nStackVarsAcc = scopeAbove->symTable->nStackVarsAcc;
-  } 
+  }
   else scopeNode->symTable->nStackVarsAcc = 0;
 
   return scopeNode->symTable;
@@ -214,7 +216,7 @@ Symbol* lookupSymbol(Node* node, Token* symToken) {
       // for the 'for' statement we have to look for symbols starting from
       // the scope of the 'for' body
 
-      if(lookNode->parent->nChildren < 4 
+      if(lookNode->parent->nChildren < 4
          || lookNode->parent->children[3]->type != NTStatement)
         genericError("Compiler bug: bad 'for' statement");
       lookNode = lookNode->parent->children[3];
@@ -232,7 +234,7 @@ Symbol* findSymbol(Node* scopeNode, Token* symToken) {
   for(int i = 0; i < st->nSymbols; i++) {
     Symbol* tabSymbol = st->symbols[i];
     if(tabSymbol->token->nameSize != symToken->nameSize) continue;
-    if(strncmp(tabSymbol->token->name, symToken->name, 
+    if(strncmp(tabSymbol->token->name, symToken->name,
          symToken->nameSize) == 0) return tabSymbol;
   }
   return NULL;
@@ -243,10 +245,10 @@ Node* getImmediateScope(Node* node) {
   if(!node->parent) {
     genericError("Compiler bug: AST node without scope.");
   }
-  if(node->parent->type == NTForSt && whichChild(node) < 3) { 
+  if(node->parent->type == NTForSt && whichChild(node) < 3) {
     // special case: 'for' iteration declaration, expression and statement
-    if(node->parent->nChildren < 4 
-       || node->parent->children[3]->type != NTStatement) 
+    if(node->parent->nChildren < 4
+       || node->parent->children[3]->type != NTStatement)
       genericError("Compiler bug: bad 'for' statement");
 
     return getImmediateScope(node->parent->children[3]);
@@ -286,7 +288,7 @@ void hoistFunctions(Node* ast) {
 
 void resolveScope(Node* node) {
   if(node->type == NTIdentifier) {
-    if(!node->parent) 
+    if(!node->parent)
       genericError("Compiler bug: AST node missing parent.");
 
     Node* scopeNode = node;
@@ -295,7 +297,7 @@ void resolveScope(Node* node) {
 
     if(parent->type == NTExpression || parent->type == NTAssignment
        || parent->type == NTCallExpr || parent->type == NTCallSt) {
-      // identifier in use  -- check if declared 
+      // identifier in use  -- check if declared
       Token* token = node->children[0]->token;
       Symbol* oldSym = lookupSymbol(node, token);
 
@@ -303,24 +305,24 @@ void resolveScope(Node* node) {
         char* fmt = "Use of undeclared variable or function '%s'.";
         char msg[strlen(fmt) + token->nameSize];
         sprintf(msg, fmt, token->name);
-        
+
         scoperError(msg, token->lnum, token->chnum);
       } else {
         char isFunc = (parent->type == NTCallExpr || parent->type == NTCallSt);
 
         if(isFunc && oldSym->type != STFunction) {
-          char* fmt = 
+          char* fmt =
             "'%s' has previously been declared as a variable, not a function.";
 
           char msg[strlen(fmt) + token->nameSize];
           sprintf(msg, fmt, token->name);
-          
+
           scoperError(msg, token->lnum, token->chnum);
         } else if(!isFunc && oldSym->type == STFunction) {
           char* fmt = "'%s' has been declared as a function, not a variable.";
           char msg[strlen(fmt) + token->nameSize];
           sprintf(msg, fmt, token->name);
-          
+
           scoperError(msg, token->lnum, token->chnum);
         }
       }
@@ -331,7 +333,7 @@ void resolveScope(Node* node) {
       } else if(parent->type == NTDeclaration) { // variable name
         Node* ppNode = parent->parent;
 
-        if(!ppNode) 
+        if(!ppNode)
           genericError("Compiler bug: AST node missing parent.");
 
         if(ppNode->type == NTProgramPart) { // global variable
@@ -385,11 +387,11 @@ void scoperError(char* msg, int lnum, int chnum) {
   if(cli.outputType > OUT_DEFAULT) exit(1);
 
   if(lnum > 0) {
-    fprintf(stderr, "\nScope " ERROR_COLOR_START "ERROR" COLOR_END 
+    fprintf(stderr, "\nScope " ERROR_COLOR_START "ERROR" COLOR_END
       ": %s\n", msg);
     printCharInFile(scoperState.file, scoperState.filename, lnum, chnum);
   } else {
-    fprintf(stderr, "\nScope " ERROR_COLOR_START "ERROR" COLOR_END 
+    fprintf(stderr, "\nScope " ERROR_COLOR_START "ERROR" COLOR_END
       ": %s\n%s.\n", msg, scoperState.filename);
   }
   exit(1);
@@ -398,11 +400,11 @@ void scoperError(char* msg, int lnum, int chnum) {
 void printSymTable(Node* scopeNode) {
   if(cli.outputType > OUT_DEBUG) return;
   if(!scopeNode->symTable) {
-//    printf("NT %d: No symtable.\n", scopeNode->type); 
+//    printf("NT %d: No symtable.\n", scopeNode->type);
     return;
   }
 //  printf("NT %d: symtable %p.\n", scopeNode->type, scopeNode->symTable);
-  printf("NT %d: symtable has %d.", scopeNode->type, 
+  printf("NT %d: symtable has %d.", scopeNode->type,
     scopeNode->symTable->nSymbols);
   if(scopeNode->symTable->nSymbols > 0) {
     for(int i = 0; i < scopeNode->symTable->nSymbols; i++)

@@ -1,7 +1,7 @@
 /*
  *
  *
- * Utilitary functions used across several phases of the compilation to deal 
+ * Utilitary functions used across several phases of the compilation to deal
  * with things such as messaging, string formatting, etc.
  */
 
@@ -17,7 +17,7 @@
 #define COLOR_END "\033[m"
 
 /*
- * Prints the line where a character is located and highlights the character. 
+ * Prints the line where a character is located and highlights the character.
  *
  * file: pointer to the source file (should be open, will be rewinded and
  *   will not be closed).
@@ -29,7 +29,7 @@
 void printCharInFile(FILE* file, char* filename, int lnum, int chnum);
 
 /*
- * Prints the line where the token is located and highlights the token. 
+ * Prints the line where the token is located and highlights the token.
  *
  * file: pointer to the source file (should be open, will be rewinded and
  *   will not be closed).
@@ -40,7 +40,7 @@ void printCharInFile(FILE* file, char* filename, int lnum, int chnum);
 void printTokenInFile(FILE* file, char* filename, Token* token);
 
 /*
- * Checks whether a token type is a literal type. 
+ * Checks whether a token type is a literal type.
  *
  * type: the token type to be checked.
  * returns: 1 if it is, 0 otherwise.
@@ -49,7 +49,7 @@ void printTokenInFile(FILE* file, char* filename, Token* token);
 int isLiteral(TokenType type);
 
 /*
- * Checks whether a token type is a (data) type type. 
+ * Checks whether a token type is a (data) type type.
  *
  * type: the token type to be checked.
  * returns: 1 if it is, 0 otherwise.
@@ -58,7 +58,7 @@ int isLiteral(TokenType type);
 int isType(TokenType type);
 
 /*
- * Checks whether a token type is a binary operator. 
+ * Checks whether a token type is a binary operator.
  *
  * type: the token type to be checked.
  * returns: 1 if it is, 0 otherwise.
@@ -67,17 +67,17 @@ int isType(TokenType type);
 int isBinaryOp(TokenType type);
 
 /*
- * Gets the precedence of an operator token type. 
+ * Gets the precedence of an operator token type.
  *
  * type: the token type to be checked.
- * returns: The operator precedence. Maximum precedence is 0, meaning that 
+ * returns: The operator precedence. Maximum precedence is 0, meaning that
  *   such operations will be executed first. If not an operator, returns -1.
  *
  */
 int precedence(TokenType type);
 
 /*
- * Checks whether the token type signals the end of an expression. 
+ * Checks whether the token type signals the end of an expression.
  *
  * type: the token type to be checked.
  * returns: 1 if it does, 0 otherwise.

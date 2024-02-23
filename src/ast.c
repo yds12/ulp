@@ -46,7 +46,7 @@ int whichChild(Node* node) {
 
 void postorderTraverse(Node* node, void (*visit)(Node*)) {
   for(int i = 0; i < node->nChildren; i++) {
-    if(!node->children[i]) 
+    if(!node->children[i])
       genericError("Internal bug: AST node with NULL child.");
     postorderTraverse(node->children[i], visit);
   }
@@ -68,11 +68,11 @@ void graphvizAstRec(Node* node) {
   char* format = "%s";
   int len = strlen(format) + MAX_NODE_NAME;
   char nodeName[len];
-  strReplaceNodeAbbrev(nodeName, format, node); 
+  strReplaceNodeAbbrev(nodeName, format, node);
 
   if(node->type == NTTerminal && node->token->type == TTLitString)
     printf("%d [label=%s];\n", node->id, nodeName);
-  else 
+  else
     printf("%d [label=\"%s\"];\n", node->id, nodeName);
 
   for(int i = 0; i < node->nChildren; i++) {
@@ -82,7 +82,7 @@ void graphvizAstRec(Node* node) {
 }
 
 void checkTree(Node* node, int nodeCount) {
-  if(!node) return; 
+  if(!node) return;
 
   int id = node->id;
   int type = node->type;
@@ -98,14 +98,14 @@ printf("type: %d, id: %d\n", node->type, node->id);
     genericError("Internal memory error.");
 
 //  if(cli.outputType == OUT_DEBUG) {
-//    printf("ID: %d, type: %d, nch: %d\n", node->id, 
+//    printf("ID: %d, type: %d, nch: %d\n", node->id,
 //      node->type, node->nChildren);
 //  }
 
   for(int i = 0; i < node->nChildren; i++) {
     Node* chnode = node->children[i];
 //    if(cli.outputType == OUT_DEBUG) {
-//      printf("ch[%d]: ID: %d, type: %d, nch: %d\n", i, chnode->id, 
+//      printf("ch[%d]: ID: %d, type: %d, nch: %d\n", i, chnode->id,
 //        chnode->type, chnode->nChildren);
 //    }
   }
