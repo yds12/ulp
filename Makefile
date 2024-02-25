@@ -1,19 +1,24 @@
-ODir=build
+CC=gcc
+CFlags=-g -O3 -Wall -Wextra
 BDir=build
 SDir=src
-Exec=build/ulpc
-CC=gcc
-Sources=src/*.c
-Opt=-g
-RelOpt=-O3
+Exec=$(BDir)/ulpc
+Sources=$(wildcard $(SDir)/*.c)
+Objects=$(patsubst $(SDir)/%.c, $(BDir)/%.o,$(Sources))
 
-compile:
-	$(CC) $(Opt) $(Sources) -o $(Exec) 
+all: $(Exec)
 
-release:
-	$(CC) $(RelOpt) $(Sources) -o $(Exec) 
+$(Exec): $(Objects)
+	$(CC) -o $(Exec) $(Objects)
+
+$(BDir)/%.o:$(SDir)/%.c
+	$(CC) -c $(CFlags) -o $@ $^
+
+test: $(Exec)
+	./aux/test
 
 clean:
-	-rm -f $(BDir)/* $(ODir)/* $(Exec)
+	rm -f $(BDir)/* $(Exec) a.out
 
-rebuild: clean compile
+rebuild: clean $(Exec)
+
