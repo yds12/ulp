@@ -1,4 +1,34 @@
 #!/bin/sh
+
+# Check that `dot` is available and exits otherwise
+if ! command -v dot >/dev/null 2>&1
+then
+    echo "Program 'dot' not installed"
+    echo "You can find it in the package 'graphviz' for Debian"
+    exit 1
+fi
+
+IMAGEFILE="build/ast.png"
+COMPILER="build/ulpc"
+
+# If `ulpc` is not available, compile it
+if [ ! -f "${COMPILER}" ]
+then
+    make
+fi
+
+# Display the source file
 cat "$1"
-build/ulpc --graphviz < "$1" | dot -Tpng > build/ast.png \
-&& xviewer build/ast.png
+
+# Compile the program in `graphviz` mode and redirect it to `dot` to generate
+# a PNG file
+${COMPILER} --graphviz < "$1" | dot -Tpng > "${IMAGEFILE}"
+
+# Open the file with `xviewer` if this is available
+if command -v xviewer >/dev/null 2>&1
+then
+    xviewer "${IMAGEFILE}"
+else
+    echo "Visualization generated at ${IMAGEFILE}"
+fi
+

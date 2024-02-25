@@ -5,9 +5,9 @@ This project is for learning purposes only.
 We implement a compiler for a simple language. The compiler will be divided
 into the following parts:
 
-* a *lexer*: process the input and generates a list of tokens; 
+* a *lexer*: process the input and generates a list of tokens;
 
-* an [LR(1)](https://en.wikipedia.org/wiki/LR_parser) *parser*: generates an 
+* an [LR(1)](https://en.wikipedia.org/wiki/LR_parser) *parser*: generates an
 [Abstract Syntax Tree](https://en.wikipedia.org/wiki/Abstract_syntax_tree)
 -- or AST;
 
@@ -19,7 +19,7 @@ if there are redeclarations;
 expected type;
 
 * a *code generator*: generates x64 assembly code targeted at
-Linux. The resulting assembly will be processed by `nasm` into object 
+Linux. The resulting assembly will be processed by `nasm` into object
 code, and then linked with `ld`.
 
 * and a *standard library*: functions that can be included by **ulp** programs,
@@ -32,7 +32,7 @@ directory. For the lexer we have [`docs/lexicon.txt`](docs/lexicon.txt), and
 for the parser we have [`docs/grammar.txt`](docs/grammar.txt). For now,
 the language will just be called **ulp**, for "uma linguagem de programação".
 
-Many examples of simple **ulp** programs can be found at the 
+Many examples of simple **ulp** programs can be found at the
 [`test/cases`](test/cases) directory.
 
 ## Building and Using the Compiler
@@ -58,10 +58,10 @@ An executable `a.out` will be created on the working directory.
 
 ### Testing the Compiler
 
-To test the compiler, a series of **ulp** programs in the `test/cases` 
+To test the compiler, a series of **ulp** programs in the `test/cases`
 directory can be automatically executed via the test script:
 
-    $ aux/test
+    $ make test
     Running test suite...
 
     Positive tests:
@@ -80,10 +80,9 @@ The passes and fails are displayed in green and red, respectively.
 
 ### Inspecting Parse Trees
 
-If you have `graphviz` installed in your machine, you can check the 
-parse trees by using the auxiliar script in `aux/view`:
+You can check the parse trees by using the auxiliar script in `aux/view`:
 
-    $ aux/view docs/current.ulp
+    $ ./aux/view docs/current.ulp
 
 This is an example of an AST that you might see:
 
@@ -91,8 +90,8 @@ This is an example of an AST that you might see:
 
 ## Roadmap
 
-Currently, the compiler is capable of parsing, doing scope resolution 
-for variables and functions and generating an executable for programs using 
+Currently, the compiler is capable of parsing, doing scope resolution
+for variables and functions and generating an executable for programs using
 a subset of the language including only booleans and 32-bit integers:
 
     $ ./ulpc ../test/cases/pos/0005a_decl_expr.ul

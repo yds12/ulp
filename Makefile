@@ -15,7 +15,7 @@ $(BDir)/%.o:$(SDir)/%.c
 	$(CC) -c $(CFlags) -o $@ $^
 
 test: $(Exec)
-	./aux/test
+	@./aux/test
 
 clean:
 	rm -f $(BDir)/* $(Exec) a.out
