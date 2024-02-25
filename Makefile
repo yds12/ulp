@@ -1,5 +1,5 @@
 CC=gcc
-CFlags=-g -O3 -Wall -Wextra
+CFlags=-std=c99 -g -O3 -Wall -Wextra
 BDir=build
 SDir=src
 Exec=$(BDir)/ulpc
@@ -21,4 +21,6 @@ clean:
 	rm -f $(BDir)/* $(Exec) a.out
 
 rebuild: clean $(Exec)
+
+.PHONY: clean rebuild
 
